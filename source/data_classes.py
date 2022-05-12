@@ -1,5 +1,7 @@
 #import my standard data modules.
 import numpy as np
+import pandas as pd
+import xarray as xr
 import matplotlib.pyplot as plt
 import matplotlib.cm as cm
 from scipy import interpolate
@@ -40,11 +42,11 @@ class Measurement:
                         data.append([float(li) for li in line.split()])
                     except:
                         continue
-        return header, self.data_to_dictionary(header, np.array(data))
+        return header, self.data_to_Dataset(header, np.array(data))
 
-    def data_to_dictionary(self, header, data):
+    def data_to_Dataset(self, header, data):
         '''
-        Construct dictionary of data columns, referenced by data-file headers.
+        Construct Dataset of data columns, referenced by data-file headers.
         Args:
             - header (list of string): data file headers
             - data (array of float): dataset -- columns correspond to different headers
