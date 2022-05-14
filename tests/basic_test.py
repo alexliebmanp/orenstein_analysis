@@ -1,14 +1,21 @@
+
+# %% codecell
+import os
 from orenstein_analysis.measurement import loader
 from orenstein_analysis.measurement import process
-from orenstein_analysis.experiment import coordinates
+from orenstein_analysis.experiment import coordinates, experiment_methods
 
-path = './test_data/'
+# %% codecell
+#path = os.path.dirname(os.path.realpath(__file__))+'/test_data/'
+path = '/Users/oxide/orenstein/code/orenstein-analysis/tests/test_data/'
 filename = 'EuIn2As2_S2_BR_13K_x2740_y2340.dat'
 
-measurement = loader.load_measurement(path+filename)
-measurement_mod = process.define_coordinates(measurement, coordinates.corotation_coordinates)
+set_coord = lambda meas: process.define_coordinates(meas, coordinates.corotation_coordinates)
 
-func = lambda meas: process.define_coordinates(meas, coordinates.corotation_coordinates)
+fit_bf = lambda meas: process.add_1D_fit(meas, 'Polarization Angle (deg)', 'Demod x', experiment_methods.fit_birefringence)
 
-#ndim_meas = loaders.load_ndim_measurement(path, ['x', 'y'], ['_x[0-9]+', '_y[0-9]+'], independent_variable='Angle 1 (deg)')
-ndim_meas = loader.load_ndim_measurement(path, ['x (um)', 'y (um)'], ['_x[0-9]+', '_y[0-9]+'], instruction_set=[func])
+measurement = loader.load_measurement(path+filename, instruction_set=[set_coord])
+
+ndim_meas = loader.load_ndim_measurement(path, ['x ($\mu$m)', 'y ($\mu$m)'], ['_x[0-9]+', '_y[0-9]+'], instruction_set=[set_coord, fit_bf])
+ndim_meas
+ndim_meas['Birefringence Offset'].plot()

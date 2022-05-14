@@ -1,5 +1,5 @@
 '''
-data_loader.py
+loader.py
 
         Methods for importing data. They rely on a standardized method of storing data from measurements and more complicated measurement routines. As a general rule, measurements refer to 1 dimension datasets which measure 1 or multiple observables as a function of an independent variable. More complex datasets should be stored as measurement files in a directory, with filenames according to a set convention.
 '''
@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import glob
 import re
 
-def load_measurement(filename, independent_variable=None):
+def load_measurement(filename, independent_variable=None, instruction_set=[]):
     '''
     loads a textfile data into a Dataset based on the headers. By default, this import method treats all data columns as dependent variables and the coordinates are with respect to some arbitrary integer independent variable. Alternatively, an independent variable can be specified.
 
@@ -24,6 +24,7 @@ def load_measurement(filename, independent_variable=None):
 
     **kwargs:
         - independent_variable(string): name for independent variable to be used as the coordinate axis. If set to None, returns dataset without specifying coordinates.
+        - instruction_set(func): list of functions to sequentially operate on each imported Dataset from left to right. Functions must take a Dataset as the only argument and return another Dataset.
     '''
     data = []
     header = []
@@ -40,6 +41,8 @@ def load_measurement(filename, independent_variable=None):
                     continue
     data_dictionary = data_to_dictionary(header, np.array(data))
     measurement = dictionary_to_dataset(data_dictionary, independent_variable)
+    for operation in instruction_set:
+        measurement = operation(measurement)
     return measurement
 
 
@@ -73,8 +76,6 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
     #coords_list = []
     for filename in data_files:
         measurement = load_measurement(filename, independent_variable)
-        for operation in instruction_set:
-            measurement = operation(measurement)
         coords = []
         for regexp in regexp_list:
             match_list = re.findall(regexp, filename)
@@ -88,9 +89,10 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
                 coords.append(val)
         for ii, coord in enumerate(coords):
             measurement.coords[dimensions[ii]] = (dimensions[ii], [coord])
+        for operation in instruction_set:
+            measurement = operation(measurement)
         measurement_list.append(measurement)
         #coords_list.append(coords)
-
     return xr.combine_by_coords(measurement_list)
 
 
