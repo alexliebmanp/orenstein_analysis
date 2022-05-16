@@ -54,7 +54,7 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
 
     For example, load_ndim_measurements(dir, ['x', 'y'], ['_x[0-9]+_', '_[0-9]+_']) can be used to load in a 2D map.
 
-    TODO: incorporate possibility for metadata stored in file.
+    TODO: incorporate possibility for metadata stored in file. I also need to start thinking more deeply about the data pipeline - when you should additional dimensions be added? How can process operations handle arbitrary dimensions so as to avoid annoying bugs? Ie, I don't like that I add some diemsnions, then do operations, and then go back and modify the old variables.
 
 
     args:
@@ -92,6 +92,10 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
         for operation in instruction_set:
             measurement = operation(measurement)
         measurement_list.append(measurement)
+        for data_var in list(measurement.data_vars):
+            for dimension in dimensions[::-1]:
+                if dimension not in measurement[data_var].dims:
+                    measurement[data_var] = measurement[data_var].expand_dims(dim=dimension)
         #coords_list.append(coords)
     return xr.combine_by_coords(measurement_list)
 

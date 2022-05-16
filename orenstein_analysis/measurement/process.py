@@ -11,11 +11,13 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
-def add_data_to_measurement(measurement, var_name, var_data, dims, exclude=False):
+def add_data_to_measurement(measurement, var_name, var_data, dims=None, exclude=False):
     '''
-    One of the most basic operations you can do to process a measurement is to add a layer of data over some set of dimensions. This function handles that in a general manner. This is basically a wrapper around the expression
+    One of the most basic operations you can do to process a measurement is to add a layer of data to the dataset. This function handles that in a general manner. This is basically a wrapper around the expression
 
                 measurement[var_name] = (dims, var_data)
+
+    If no dimensions are given, adds data as a dimensionless data variable.
 
     For example, you might take data as a function of time, fit to a decaying exponential to get a time constant, and then you want to add the time constant as a function of all the other coordinate variables.
 
@@ -25,24 +27,26 @@ def add_data_to_measurement(measurement, var_name, var_data, dims, exclude=False
         - measurement(Dataset):     Dataset over which to add data.
         - var_name(string):         name for new data.
         - var_data(DataArray):      data to add.
-        - dims(string):             tuple of dimensions over which to add data.
 
     returns:
         - modified_measurement(Dataset):
 
     kwargs**:
+        - dims(string):             tuple of dimensions over which to add data. Defaults to not specifying dimensions.
         - exclude(bool):            If exclude is True, will add data over all coordinates except for coords.
     '''
-    if set(dims).issubset(set(list(measurement.dims)))==False:
-        raise ValueError('dims '+str(dims)+' are not already dimensions of measurement object. Please add dimensions to measurement and try agian.')
-    if exclude==True:
-        dims = tuple([i for i in list(measurement.dims) if i not in dims])
-    shape = tuple([measurement[i].shape[0] for i in dims])
-    if shape!=var_data.shape:
-        raise ValueError('Incompatible shapes. Shape of dimensions = '+str(shape)+', shape of data = '+str(var_data.shape))
     modified_measurement = measurement.copy()
-    modified_measurement[var_name] = (dims, var_data)
-
+    if dims==None:
+        modified_measurement[var_name] = var_data
+    else:
+        if set(dims).issubset(set(list(measurement.dims)))==False:
+            raise ValueError('dims '+str(dims)+' are not already dimensions of measurement object. Please add dimensions to measurement and try agian.')
+        if exclude==True:
+            dims = tuple([i for i in list(measurement.dims) if i not in dims])
+        shape = tuple([measurement[i].shape[0] for i in dims])
+        if shape!=var_data.shape:
+            raise ValueError('Incompatible shapes. Shape of dimensions = '+str(shape)+', shape of data = '+str(var_data.shape))
+        modified_measurement[var_name] = (dims, var_data)
     return modified_measurement
 
 def add_1D_fit(measurement, x_var, y_var, f, p0=None):
