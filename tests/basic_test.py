@@ -1,9 +1,8 @@
-
 # %% codecell
 import os
 from orenstein_analysis.measurement import loader
 from orenstein_analysis.measurement import process
-from orenstein_analysis.experiment import coordinates, experiment_methods
+from orenstein_analysis.experiment import experiment_methods
 import xarray as xr
 import numpy as np
 import pandas as pd
@@ -13,11 +12,11 @@ import pandas as pd
 path = '/Users/oxide/orenstein/code/orenstein-analysis/tests/test_data/'
 filename = 'EuIn2As2_S2_BR_13K_x2740_y2340.dat'
 
-set_coord = lambda meas: process.define_coordinates(meas,  coordinates.corotation_coordinates)
+set_coord = lambda meas: process.add_dimensional_coordinates(meas, 'Polarization Angle (deg)', 2*meas['Angle 1 (deg)'])
 
 fit_bf = lambda meas: process.add_1D_fit(meas, 'Polarization Angle (deg)', 'Demod x', experiment_methods.fit_birefringence)
 
-measurement = loader.load_measurement(path+filename, instruction_set=[set_coord, fit_bf])
+measurement = loader.load_measurement(path+filename, instruction_set=[set_coord])
 
 measurement
 

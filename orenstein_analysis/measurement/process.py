@@ -80,28 +80,26 @@ def add_1D_fit(measurement, x_var, y_var, f, p0=None):
         measurement = add_data_to_measurement(measurement, var_name, var_data, dims)
     return measurement
 
-def define_coordinates(measurement, coordinate_function):
+def add_dimensional_coordinates(measurement, coordinate_name, coordinate_data):
     '''
-    Given a function that acts on a measurement, defines the coordinates and dimensions in the measurement based on output of the function. Also goes through and renames all other dimensions to match the coordinate dimension that match the default expression 'dim'.
-
-    For example, for a corotation scan the function can calculate the corotation angle based on Angle 1 and then modifies the coordinates to reflect this.
-
-    TODO: This seems like a poorly designed and syntaxed function.
+    Given a DataArray with a new coordinate, defines the dimensions and associated coordinates in the measurement. Then, goes through and renames all other dimensions that match the default expression ('dim').
 
     args:
         - measurement(Dataset):
-        - coordinate_function:  a function that returns the coordinate name and data (in particular, this generates a dimensional coordinate)
+                - coordinate_name(string):          name of new coordinate.
+        - coordinate_data(DataArray or ndarray):    new coordinate data
 
     returns:
         - modified_measurement(Dataset):
     '''
+    if type(coordinate_data) is xr.core.dataarray.DataArray:
+        coordinate_data = coordinate_data.data
     dataset = measurement.copy()
-    coord_name, coord_data = coordinate_function(dataset)
     old_dims = list(dataset.dims)
     rename_dict = {}
     for i in old_dims:
         if 'dim' in i:
-            rename_dict[i] = coord_name
+            rename_dict[i] = coordinate_name
     dataset = dataset.rename(rename_dict)
-    dataset.coords[coord_name] = coord_data
+    dataset.coords[coordinate_name] = coordinate_data
     return dataset
