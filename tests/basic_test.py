@@ -21,7 +21,7 @@ measurement = loader.load_measurement(path+filename, instruction_set=[set_coord,
 
 measurement
 
-ndim_meas = loader.load_ndim_measurement(path, ['x ($\mu$m)', 'y ($\mu$m)'], ['_x[0-9]+', '_y[0-9]+'], instruction_set=[set_coord, fit_bf])
+ndim_meas = loader.load_ndim_measurement(path, {'x ($\mu$m)':'_x[0-9]+', 'y ($\mu$m)':'_y[0-9]+'}, instruction_set=[set_coord, fit_bf])
 
 ndim_meas.dims
 list(ndim_meas.coords)

@@ -61,6 +61,7 @@ def add_1D_fit(measurement, x_var, y_var, f, p0=None):
         - measurement(Dataset):
         x_var(string):              name of x variable in measurement
         y_var(string):              name of y variable in measurement
+        f(func):                    function that takes x and y coordinates, any other kwargs, and outputs a dictionary of parameters to add to measurement.
     returns:
         - measurement(Dataset): another measurement with the fits
     '''
@@ -68,15 +69,15 @@ def add_1D_fit(measurement, x_var, y_var, f, p0=None):
     y = measurement[y_var].data
     if len(x.shape) != 1 or len(y.shape) != 1:
         raise ValueError('Not 1D data. x and y data have dimensions '+str(len(x.shape))+' and '+str(len(y.shape))+' respectively.')
-    popt, names = f(x, y, p0)
+    popt_dict = f(x, y, p0)
     dims = tuple([i for i in measurement.dims if i != x_var])
     nesting_depth = len(dims)
-    for ii, p_data in enumerate(popt):
-        var_data = p_data
+    for var_name in list(popt_dict):
+        var_data = popt_dict[var_name]
         for i in range(nesting_depth):
             var_data = [var_data]
         var_data = np.array(var_data)
-        measurement = add_data_to_measurement(measurement, names[ii], var_data, dims)
+        measurement = add_data_to_measurement(measurement, var_name, var_data, dims)
     return measurement
 
 def define_coordinates(measurement, coordinate_function):

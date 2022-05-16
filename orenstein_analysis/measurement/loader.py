@@ -46,7 +46,7 @@ def load_measurement(filename, independent_variable=None, instruction_set=[]):
     return measurement
 
 
-def load_ndim_measurement(directory, dimensions, regexp_list, independent_variable=None, instruction_set=[]):
+def load_ndim_measurement(directory, dimensions_dict, independent_variable=None, instruction_set=[]):
     '''
     parses a directory for textfiles and stores data as a multidimensional Dataset, where each dimension is assigned based on parsing filenames according to regexp_list or via metadata contained in each data file. In addition, a list of functions can be passed to this method which act sequentially to raw data in order to process it as it gets loaded.
 
@@ -59,8 +59,8 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
 
     args:
         - directory(string):                full path to data directory
-        - dimensions(string):               list with name of each dimension
-        - regex_list(string):               list of regex patterns for extracting each coordinate value from the file names. If set to None, will try to extract from Dataset attributes.
+        - dimensions_dict(string):          dict with keys are dimensions and values are regex patterns for extracting coordinate value from filename.
+        - regex_list(string):               list of regex patterns for extracting each coordinate value from the file names.
 
     returns:
         - ndim_measurement(Dataset):        dataset
@@ -69,8 +69,8 @@ def load_ndim_measurement(directory, dimensions, regexp_list, independent_variab
         - independent_variable(string):     name for independent variable to be used as the coordinate axis. If set to None, returns dataset without specifying coordinates.
         - instruction_set(functions):       list of functions to sequentially operate on each imported Dataset from left to right. Functions must take a Dataset as the only argument and return another Dataset.
     '''
-    if len(dimensions)!=len(regexp_list) and regexp_list!=None:
-        raise ValueError('number of dimensions to search does not match number of regular expressions for parsing filenames.')
+    dimensions = list(dimensions_dict)
+    regexp_list = list(dimensions_dict.values())
     data_files = glob.glob(directory+'*.dat')
     measurement_list = []
     #coords_list = []
