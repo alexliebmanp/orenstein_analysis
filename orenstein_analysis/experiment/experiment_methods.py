@@ -1,7 +1,7 @@
 '''
 experiment_methods.py
 
-    Methods for processing data.
+    Methods for processing data. Methods in this module tend to return data_var and coord_var dictionaries with key:value pairs corresponding to variable names and data respectively, which are then eventually added to a measurement.
 
 '''
 import numpy as np
@@ -21,7 +21,7 @@ def fit_birefringence(x, y, p0=None):
         - y(float)
 
     returns:
-        - popt(float): optimal fit parameters [a1, phi1, a2, phi2, b]
+        - popt_dict(float): optimal fit parameters [a1, phi1, a2, phi2, b]
     '''
 
     f = lambda x, a1, phi1, a2, phi2, b: a1*np.cos(2*x - phi1) + a1*np.cos(4*x - phi2) + b
@@ -34,5 +34,7 @@ def fit_birefringence(x, y, p0=None):
         p0 = [a10, phi10, a20, phi20, b]
     popt, pcov = opt.curve_fit(f, x, y, p0=p0)
     names = ['Birefringence Amplitude', 'Birefringence Angle', '4Theta Amplitude', '4Theta Angle', 'Birefringence Offset']
-
-    return popt, names
+    popt_dict = {}
+    for ii, name in enumerate(names):
+        popt_dict[name] = popt[ii]
+    return popt_dict

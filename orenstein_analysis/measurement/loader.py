@@ -9,6 +9,7 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import glob
 import re
+from orenstein_analysis.measurement import process
 
 def load_measurement(filename, independent_variable=None, instruction_set=[]):
     '''
@@ -54,7 +55,7 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
 
     For example, load_ndim_measurements(dir, ['x', 'y'], ['_x[0-9]+_', '_[0-9]+_']) can be used to load in a 2D map.
 
-    TODO: incorporate possibility for metadata stored in file. I also need to start thinking more deeply about the data pipeline - when you should additional dimensions be added? How can process operations handle arbitrary dimensions so as to avoid annoying bugs? Ie, I don't like that I add some diemsnions, then do operations, and then go back and modify the old variables.
+    TODO: incorporate possibility for metadata stored in file. I also need to start thinking more deeply about the data pipeline - when you should additional dimensions be added? How can process operations handle arbitrary dimensions so as to avoid annoying bugs? Ie, I don't like that I add some diemsnions, then do operations, and then go back and modify the old variables. Either get rid of instruction set or pass it into load_measurement directly to make it cleanest. Make sure to be separating tasks into very specific functions.
 
 
     args:
@@ -76,8 +77,10 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     #coords_list = []
     for filename in data_files:
         measurement = load_measurement(filename, independent_variable)
-        coords = []
-        for regexp in regexp_list:
+        for operation in instruction_set:
+            measurement = operation(measurement)
+        coords = {}
+        for ii, regexp in enumerate(regexp_list):
             match_list = re.findall(regexp, filename)
             if match_list == []:
                 raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
@@ -86,16 +89,10 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
             else:
                 p = re.compile('[0-9]+')
                 val = float(p.search(match_list[0]).group())
-                coords.append(val)
-        for ii, coord in enumerate(coords):
-            measurement.coords[dimensions[ii]] = (dimensions[ii], [coord])
-        for operation in instruction_set:
-            measurement = operation(measurement)
+                coords[dimensions[ii]] = val
+        measurement = process.add_dimensional_coordinates(measurement, coords)
         measurement_list.append(measurement)
-        for data_var in list(measurement.data_vars):
-            for dimension in dimensions[::-1]:
-                if dimension not in measurement[data_var].dims:
-                    measurement[data_var] = measurement[data_var].expand_dims(dim=dimension)
+
         #coords_list.append(coords)
     return xr.combine_by_coords(measurement_list)
 

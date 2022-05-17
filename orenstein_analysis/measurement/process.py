@@ -13,7 +13,7 @@ import matplotlib.pyplot as plt
 
 def add_data_to_measurement(measurement, var_name, var_data, dims=None, exclude=False):
     '''
-    One of the most basic operations you can do to process a measurement is to add a layer of data to the dataset. This function handles that in a general manner. This is basically a wrapper around the expression
+    One of the most basic operations you can do to process a measurement is to add a layer of data to the dataset. This function handles that in a general manner. This is basically a wrapper around the expression MAYBE THIS NEEDS TO BE MODELED AFTER THE BASIC INITIZLIAZATION CODE.
 
                 measurement[var_name] = (dims, var_data)
 
@@ -49,6 +49,18 @@ def add_data_to_measurement(measurement, var_name, var_data, dims=None, exclude=
         modified_measurement[var_name] = (dims, var_data)
     return modified_measurement
 
+def add_processed(measurement, instruction_set, kwrags=None):
+    '''
+    Sequentially operate on measurement with function in instruction set and add new measurement variables according to the output of each function, which have the form of a dictionary with key:value pairs indicating.
+
+    The hope for this function is that it can handle all kinds of dimensions and in particular can be used to process specific functions in multiple dimensions after initial processing. For example, adding a layer of fourier transform.
+    '''
+    for f in instruction_set:
+        data_vars, coord_vars = f(measurement)
+        measurement = add_data_to_measurement(measurement, data_vars, coord_vars)
+    return measurement
+
+
 def add_1D_fit(measurement, x_var, y_var, f, p0=None):
     '''
     fits a 1D scan to a function and returns another measurement with added data variables corresponding to fit values.
@@ -70,36 +82,58 @@ def add_1D_fit(measurement, x_var, y_var, f, p0=None):
     if len(x.shape) != 1 or len(y.shape) != 1:
         raise ValueError('Not 1D data. x and y data have dimensions '+str(len(x.shape))+' and '+str(len(y.shape))+' respectively.')
     popt_dict = f(x, y, p0)
-    dims = tuple([i for i in measurement.dims if i != x_var])
-    nesting_depth = len(dims)
     for var_name in list(popt_dict):
-        var_data = popt_dict[var_name]
-        for i in range(nesting_depth):
-            var_data = [var_data]
-        var_data = np.array(var_data)
-        measurement = add_data_to_measurement(measurement, var_name, var_data, dims)
+        var_data = np.array(popt_dict[var_name])
+        measurement = add_data_to_measurement(measurement, var_name, var_data)
     return measurement
 
-def add_dimensional_coordinates(measurement, coordinate_name, coordinate_data):
+def define_dimensional_coordinates(measurement, coordinates):
     '''
-    Given a DataArray with a new coordinate, defines the dimensions and associated coordinates in the measurement. Then, goes through and renames all other dimensions that match the default expression ('dim').
+    Adds a dimensional coordinate variable to measurement and replaces default dimensions on all data variables in the data to match new dimension. Only intended to work for 1 dimensional Datasets.
 
     args:
-        - measurement(Dataset):
-                - coordinate_name(string):          name of new coordinate.
-        - coordinate_data(DataArray or ndarray):    new coordinate data
+        - measurement(Dataset):     input measurement
+        - coordinates:              dictionary of key:value for name and coordinate data
 
     returns:
         - modified_measurement(Dataset):
     '''
+    if len(list(coordinates))>1:
+        raise ValueError('ambiguous input. Coordinates dictionary must contain only one new coordinate.')
+    coordinate_name = list(coordinates)[0]
+    coordinate_data = coordinates[coordinate_name]
     if type(coordinate_data) is xr.core.dataarray.DataArray:
         coordinate_data = coordinate_data.data
-    dataset = measurement.copy()
-    old_dims = list(dataset.dims)
+    modified_measurement = measurement.copy()
+    old_dims = list(modified_measurement.dims)
     rename_dict = {}
     for i in old_dims:
         if 'dim' in i:
             rename_dict[i] = coordinate_name
-    dataset = dataset.rename(rename_dict)
-    dataset.coords[coordinate_name] = coordinate_data
-    return dataset
+    modified_measurement = modified_measurement.rename(rename_dict)
+    modified_measurement.coords[coordinate_name] = coordinate_data
+    return modified_measurement
+
+
+def add_dimensional_coordinates(measurement, coordinates):
+    '''
+    Adds dimensional coordinate variables and modifies all data variables to be functions of these new dimension in order as they appear in the dictionary.
+
+    args:
+        - measurement(Dataset):     input measurement
+        - coordinates:              dictionary of key:value for name and coordinate data
+
+    returns:
+        - modified_measurement(Dataset):
+    '''
+    coordinate_names = list(coordinates)
+    modified_measurement = measurement.copy()
+    for coord_name in coordinate_names:
+        coord_data = coordinates[coord_name]
+        if type(coord_data) is xr.core.dataarray.DataArray:
+            coord_data = coord_data.data
+        modified_measurement.coords[coord_name] = coord_data
+    for coord_name in coordinate_names[::-1]:
+        for data_var in list(measurement.data_vars):
+            modified_measurement[data_var] = modified_measurement[data_var].expand_dims(dim=coord_name)
+    return modified_measurement
