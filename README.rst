@@ -10,6 +10,6 @@ At the core of the package is the Measurement class,  which is a container for d
 
 
 
-The syntax for this package needs to be consistent, intuitive, and clear. All data is stored in a xarray Dataset as a DataArray. To distinguish from the xarray syntax so as to avoid confusion between code native to xarray and code native to this package, we will refer to a Dataset as a measurement. If needed, DataArrays will be referred to as measurement_data
+The syntax for this package needs to be consistent, intuitive, and clear. All data is stored in a xarray Dataset as a DataArray. To distinguish from the xarray syntax so as to avoid confusion between code native to xarray and code native to this package, we will often refer to a Dataset as a measurement. Sometimes, however, the two terms are used interchangeably. If needed, DataArrays will be referred to as measurement_data
 
 In addition, the package is divided into two module categories. (1) measurement methods, which are general purpose and do not reference any specific type of experiment, and (2) experimental methods, which is a space to add specific functionality on top of the measurement methods.
