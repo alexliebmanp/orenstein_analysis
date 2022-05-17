@@ -18,9 +18,10 @@ set_coord = lambda meas: process.define_dimensional_coordinates(meas, {'Polariza
 fit_bf = lambda meas: process.add_processed(meas, (experiment_methods.fit_birefringence, ['Polarization Angle (deg)', 'Demod x']))
 
 ndim_meas = loader.load_ndim_measurement(path, {'x ($\mu$m)':'_x[0-9]+', 'y ($\mu$m)':'_y[0-9]+'}, instruction_set=[set_coord, fit_bf])
-ndim_meas
+ndim_meas['Birefringence Angle'].data
+
 # %% codecell
-ndim_meas['Birefringence Amplitude'].plot(cmap='magma')
+ndim_meas['Birefringence Angle'].plot(cmap='twilight')
 plt.title(r'EuIn$_2$As$_2$')
 
 # %% codecell
