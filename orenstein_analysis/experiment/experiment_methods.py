@@ -39,32 +39,36 @@ def fit_birefringence(measurement, x_var, y_var, p0=None):
         b = (1/2)*np.max(y)
         p0 = [a20, phi20, a10, phi10, b]
     popt, pcov = opt.curve_fit(f, x, y, p0=p0)
-    popt = redefineFitAngles(popt)
+    xfit = np.linspace(x[0], x[-1],1000)
+    yfit = np.asarray([f(i, *popt) for i in xfit])
+    popt = redefine_fit_angles(popt)
     names = ['4Theta Amplitude', '4Theta Angle', 'Birefringence Amplitude', 'Birefringence Angle', 'Birefringence Offset']
     data_vars = {}
+    coord_vars= {}
     for ii, name in enumerate(names):
         data_vars[name] = ((), popt[ii])
-    return data_vars, None
+    coord_vars[x_var+' (fit)'] = xfit
+    data_vars[y_var+' (fit)'] = ((x_var+' (fit)'), yfit)
+    return data_vars, coord_vars
 
 
-def redefineFitAngles (params):
+def redefine_fit_angles(params):
+    '''
+    helper function for fit_birefringence(), which
+    '''
     if params[0]<0:
             params[0]=-params[0]
             params[1]=params[1]+180/4
-
     #postive amplitude 2theta
     if params[2]<0:
         params[2]=-params[2]
         params[3]=params[3]+180/2
-
     while params[1]>90:
         params[1]=params[1]-90
     while params[1]<0:
         params[1]=params[1]+90
-
     while params[3]<0:
         params[3]=params[3]+180
     while params[3]>180:
         params[3]=params[3]-180
-
     return params

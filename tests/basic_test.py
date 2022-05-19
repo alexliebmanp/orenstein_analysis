@@ -18,7 +18,12 @@ set_coord = lambda meas: process.define_dimensional_coordinates(meas, {'Polariza
 fit_bf = lambda meas: process.add_processed(meas, (experiment_methods.fit_birefringence, ['Polarization Angle (deg)', 'Demod x']))
 
 ndim_meas = loader.load_ndim_measurement(path, {'x ($\mu$m)':'_x[0-9]+', 'y ($\mu$m)':'_y[0-9]+'}, instruction_set=[set_coord, fit_bf])
-ndim_meas['Birefringence Angle'].data
+print(ndim_meas)
+
+# %% codecell
+ndim_meas['Demod x (fit)'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(label='fit')
+ndim_meas['Demod x'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(marker='o', ms=8, linestyle='None', label='data')
+plt.legend()
 
 # %% codecell
 ndim_meas['Birefringence Angle'].plot(cmap='twilight')

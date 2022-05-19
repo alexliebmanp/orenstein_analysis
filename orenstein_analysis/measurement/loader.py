@@ -47,7 +47,7 @@ def load_measurement(filename, independent_variable=None, instruction_set=[]):
     return measurement
 
 
-def load_ndim_measurement(directory, dimensions_dict, independent_variable=None, instruction_set=[]):
+def load_ndim_measurement(directory, dimensions_dict, independent_variable=None, instruction_set=[], print=False):
     '''
     parses a directory for textfiles and stores data as a multidimensional Dataset, where each dimension is assigned based on parsing filenames according to regexp_list or via metadata contained in each data file. In addition, a list of functions can be passed to this method which act sequentially to raw data in order to process it as it gets loaded.
 
@@ -61,7 +61,6 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     args:
         - directory(string):                full path to data directory
         - dimensions_dict(string):          dict with keys are dimensions and values are regex patterns for extracting coordinate value from filename.
-        - regex_list(string):               list of regex patterns for extracting each coordinate value from the file names.
 
     returns:
         - ndim_measurement(Dataset):        dataset
@@ -69,6 +68,7 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     **kwargs:
         - independent_variable(string):     name for independent variable to be used as the coordinate axis. If set to None, returns dataset without specifying coordinates.
         - instruction_set(functions):       list of functions to sequentially operate on each imported Dataset from left to right. Functions must take a Dataset as the only argument and return another Dataset.
+        - print(bool):                      if True, prints filenames as they get processed. Mainly for troubleshooting.
     '''
     dimensions = list(dimensions_dict)
     regexp_list = list(dimensions_dict.values())
@@ -84,14 +84,16 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
             match_list = re.findall(regexp, filename)
             if match_list == []:
                 raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
-            elif len(match_list) == 2:
+            elif len(match_list)==2:
                 raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
             else:
-                p = re.compile('[0-9]+')
+                p = re.compile('[0-9]+[.]?[0-9]+') # matches arbitrary decimal value
                 val = float(p.search(match_list[0]).group())
                 coords[dimensions[ii]] = val
         measurement = process.add_dimensional_coordinates(measurement, coords)
         measurement_list.append(measurement)
+        if print==True:
+            print(filename)
 
         #coords_list.append(coords)
     return xr.combine_by_coords(measurement_list)
