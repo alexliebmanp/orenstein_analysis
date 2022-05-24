@@ -8,7 +8,7 @@ Briefly, xarray DataArrays are labeled, indexed wrappers around numpy ndarrays. 
 2. general - xarray handles common low-level manipulation of arbitrary datasets so that users can focus on the specifics that differ from dataset to dataset.
 3.  extendable - easy to adopt new measurement modalities and datasets without having to rewrite or copy-paste
 
-Familiarity with xarray is important for using this package, however the most important syntactic aspect of xarray for this README is the form in which data and coordinate variables are specified. In particulary, to generate a new data variable to an existing Dataset `ds`, one must add the dictionary element `{'var_name':(dims, data)}` where `var_name` is a label, `data` is a numpy ndarray, and `dims` is a tuple of labels matching each axis of `data`. The same holds for a coordinate variable, except when generating a dimensional coordinate (e.g. the time axis in a timeseries dataset), the dimension is taken as the coordinate label implicitly: `{'coord_name':data}`. 
+Familiarity with xarray is important for using this package, however the most important syntactic aspect of xarray for this README is the form in which data and coordinate variables are specified. In particulary, to generate a new data variable to an existing Dataset `ds`, one must add the dictionary element `{'var_name':(dims, data)}` where `var_name` is a label, `data` is a numpy ndarray, and `dims` is a tuple of labels matching each axis of `data`. The same holds for a coordinate variable, except when generating a dimensional coordinate (e.g. the time axis in a timeseries dataset), the dimension is taken as the coordinate label implicitly: `{'coord_name':data}`.
 
 ### Setup
 
@@ -40,9 +40,9 @@ Multidimensional datasets are built up in a directory as a set of such text file
 
 ```
 data_directory/
-  pumpprobe_10K_100mW.txt
-  pumpprobe_20K_100mW.txt
-  pumpprobe_30K_100mW.txt
+  pumpprobe_10K_100mW.dat
+  pumpprobe_20K_100mW.dat
+  pumpprobe_30K_100mW.dat
 ```
 
 The `loader.load_measurement()` function loads 1 dimensional data from a single text file into an xarray Dataset, while `loader.load_ndim_measurement()` searches through a directory and assembles a multidimensional Dataset, extracting and organizing other coordinates based on the filename and a few simple user inputs (future work will include ability to search metadata for other coordinates). For example, after a call to `loader.load_ndim_measurement()`, the user will have access to a data set 'signal 1 (V)' which is a function of 'time delay (ps)' and 'temperature (K)'. It is emphasized that adding additional coordinates is trivial within this framework.
@@ -53,7 +53,7 @@ The intended workflow for `orenstein-analysis` reflects the underlying 1D nature
 
 ```mermaid
 flowchart LR
-  A["\data_directory"\npumpprobe_10K_100mW.txt\npumpprobe_20K_100mW.txt\npumpprobe_30K_100mW.txt] --> B[loader.load_ndim_measurement] --> C[Dataset ds\n1D data processed] --> D[process.add_processed] --> E[ds\n additional processing on top \n now in form to easily visualize or manipulate];
+  A["\data_directory"\npumpprobe_10K_100mW.dat\npumpprobe_20K_100mW.dat\npumpprobe_30K_100mW.dat] --> B[loader.load_ndim_measurement] --> C[Dataset ds\n1D data processed] --> D[process.add_processed] --> E[ds\n additional processing on top \n now in form to easily visualize or manipulate];
   F[instruction_set] --> B; G["(function, arguments)"] --> D
  ```
 
