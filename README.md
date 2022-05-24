@@ -54,7 +54,7 @@ The intended workflow for `orenstein-analysis` reflects the underlying 1D nature
 ```mermaid
 flowchart LR
   A["\data_directory"\npumpprobe_10K_100mW.dat\npumpprobe_20K_100mW.dat\npumpprobe_30K_100mW.dat] --> B[loader.load_ndim_measurement] --> C[Dataset ds\n1D data processed] --> D[process.add_processed] --> E[ds\n additional processing on top \n now in form to easily visualize or manipulate];
-  F[instruction_set] --> B; G["(function, arguments)"] --> D
+  H[User functions] --> |process.add_processed| F[instruction_set] --> B; G[User functions] --> D
  ```
 
 The main feature of `loader.load_measurement()` and `loader.load_ndim_measurement()` is the `instruction_set` kwarg, which accepts a list of functions `[f1, f2, f3, ...]`. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if `ds` is the initial dataset, at the end of the loading operation the stored dataset is `f3(f2(f1(ds)))`.
