@@ -14,74 +14,79 @@ Although today there are many powerful databases for storing and organizing data
 
 At the core of any optics measurement in the Orenstein Lab is a 1-dimensional dataset. For example, in a pump-probe measurement we measure some signal (and other observables or diagnostics) as a function of time-delay, which gets stored as a text file of the form:
 
-  [METADATA]
-  ...
-  ...
-  [DATA]
-  time delay (ps) signal 1 (V) signal 2  (V)
-  ... ... ...
-  ... ... ...
+```
+[METADATA]
+...
+...
+[DATA]
+time delay (ps) signal 1 (V) signal 2  (V)
+... ... ...
+... ... ...
+```
 
 Multidimensional datasets are built up in a directory as a set of such text files with names that specify additional coordinates. For example, a pump-probe experiment as a function of temperature might look like:
 
-  data_directory/
-    pumpprobe_10K_100mW.txt
-    pumpprobe_20K_100mW.txt
-    pumpprobe_30K_100mW.txt
+```
+data_directory/
+  pumpprobe_10K_100mW.txt
+  pumpprobe_20K_100mW.txt
+  pumpprobe_30K_100mW.txt
+```
 
-The loader.load_measurement() function loads 1 dimensional data from a single text file into an xarray Dataset, while loader.load_ndim_measurement() searches through a directory and assembles a multidimensional Dataset, extracting and organizing other coordinates based on the filename and a few simple user inputs (future work will include ability to search metadata for other coordinates). For example, after a call to loader.load_ndim_measurement(), the user will have access to a data set 'signal 1 (V)' which is a function of 'time delay (ps)' and 'temperature (K)'. It is emphasized that adding additional coordinates is trivial within this framework.
+The `loader.load_measurement()` function loads 1 dimensional data from a single text file into an xarray Dataset, while `loader.load_ndim_measurement()` searches through a directory and assembles a multidimensional Dataset, extracting and organizing other coordinates based on the filename and a few simple user inputs (future work will include ability to search metadata for other coordinates). For example, after a call to `loader.load_ndim_measurement()`, the user will have access to a data set 'signal 1 (V)' which is a function of 'time delay (ps)' and 'temperature (K)'. It is emphasized that adding additional coordinates is trivial within this framework.
 
 ### Workflow
 
 The intended workflow for orenstein-analysis reflects the underlying 1D nature of our experiments while still leaving options for post processing on multidimensional sets.
 
-The main feature of loader.load_measurement() and loader.load_ndim_measurement() is the instruction_set **kwarg, which accepts a list of functions [f1, f2, f3, ...]. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if ds is the initial dataset, at the end of the loading operation the stored dataset is f3(f2(f1(ds))). Following our example above, each time trace might be fit to a given functional for at each temperature and then the multidimensional Dataset will include a data variable containing the time constant as a function of temperature.
+The main feature of `loader.load_measurement()` and `loader.load_ndim_measurement()` is the `instruction_set` **kwarg, which accepts a list of functions `[f1, f2, f3, ...]`. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if `ds` is the initial dataset, at the end of the loading operation the stored dataset is `f3(f2(f1(ds)))`. Following our example above, each time trace might be fit to a given functional for at each temperature and then the multidimensional Dataset will include a data variable containing the time constant as a function of temperature.
 
-In addition, the process.add_processed() function works similarly, taking in a Dataset ds and instruction_set [g1, g2, g3, ...] and returning g3(g2(g1(ds))). This can be used to build pipelines for processing multidimensional data, such as 2D Fourier transforms on already processed data.
+In addition, the `process.add_processed()` function works similarly, taking in a Dataset `ds` and instruction_set `[g1, g2, g3, ...]` and returning `g3(g2(g1(ds)))`. This can be used to build pipelines for processing multidimensional data, such as 2D Fourier transforms on already processed data.
 
 ### Example
 
 The following is an example of a birefringence experiment the measures a balanced photodiode as a function of the co-rotation of two half-wave-plates and space (x and y). This example can be run in the tests directory of this package.
 
-  import os
-  from orenstein_analysis.measurement import loader
-  from orenstein_analysis.measurement import process
-  from orenstein_analysis.experiment import experiment_methods
-  import xarray as xr
-  import numpy as np
-  import pandas as pd
-  import matplotlib.pyplot as plt
+```
+import os
+from orenstein_analysis.measurement import loader
+from orenstein_analysis.measurement import process
+from orenstein_analysis.experiment import experiment_methods
+import xarray as xr
+import numpy as np
+import pandas as pd
+import matplotlib.pyplot as plt
 
-  # specify path to directory containing datafiles (and only datafiles)
-  path = os.path.dirname(os.path.realpath(__file__))+'/test_data/'
+# specify path to directory containing datafiles (and only datafiles)
+path = os.path.dirname(os.path.realpath(__file__))+'/test_data/'
 
-  # define functions for processing, which accept a measurement and return a measurement. These functions wrap more elaborate functions which forms the backbone of the user input. It is in writing these functions that the user tailors to their application.
-  set_coord = lambda meas: process.define_dimensional_coordinates(meas, {'Polarization Angle (deg)':2*meas['Angle 1 (deg)']})
+# define functions for processing, which accept a measurement and return a measurement. These functions wrap more elaborate functions which forms the backbone of the user input. It is in writing these functions that the user tailors to their application.
+set_coord = lambda meas: process.define_dimensional_coordinates(meas, {'Polarization Angle (deg)':2*meas['Angle 1 (deg)']})
 
-  fit_bf = lambda meas: process.add_processed(meas, (experiment_methods.fit_birefringence, ['Polarization Angle (deg)', 'Demod x']))
+fit_bf = lambda meas: process.add_processed(meas, (experiment_methods.fit_birefringence, ['Polarization Angle (deg)', 'Demod x']))
 
-  # load and preliminary processing of data. Note the only other user input is in defining the new coordinates and python regex strings for extracting coordinate values from filename.
-  ndim_meas = loader.load_ndim_measurement(path, {'x ($\mu$m)':'_x[0-9]+', 'y ($\mu$m)':'_y[0-9]+'}, instruction_set=[set_coord, fit_bf])
-  print(ndim_meas)
+# load and preliminary processing of data. Note the only other user input is in defining the new coordinates and python regex strings for extracting coordinate values from filename.
+ndim_meas = loader.load_ndim_measurement(path, {'x ($\mu$m)':'_x[0-9]+', 'y ($\mu$m)':'_y[0-9]+'}, instruction_set=[set_coord, fit_bf])
+print(ndim_meas)
 
-  # visualize data
-  fig, [ax1, ax2, ax3]  = plt.subplots(1,3)
+# visualize data
+fig, [ax1, ax2, ax3]  = plt.subplots(1,3)
 
-  ndim_meas['Demod x (fit)'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(ax=ax1, label='fit')
-  ndim_meas['Demod x'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(ax=ax1, marker='o', ms=8, linestyle='None', label='data')
-  ax1.legend()
-  ax1.set_title('Birefringence fit at x = 2800 and y = 2475')
+ndim_meas['Demod x (fit)'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(ax=ax1, label='fit')
+ndim_meas['Demod x'].sel({'x ($\mu$m)':2800, 'y ($\mu$m)':2475}, method='nearest').plot(ax=ax1, marker='o', ms=8, linestyle='None', label='data')
+ax1.legend()
+ax1.set_title('Birefringence fit at x = 2800 and y = 2475')
 
-  ndim_meas['Birefringence Angle'].plot(ax=ax2, cmap='twilight')
-  ax2.set_title(r'EuIn$_2$As$_2$')
+ndim_meas['Birefringence Angle'].plot(ax=ax2, cmap='twilight')
+ax2.set_title(r'EuIn$_2$As$_2$')
 
-  xr.plot.hist(ndim_meas['Birefringence Angle'], ax=ax3)
+xr.plot.hist(ndim_meas['Birefringence Angle'], ax=ax3)
 
-  fig.set_size_inches(12, 4, forward=True)
-  plt.tight_layout()
-  plt.show()
-
-  ![output from above code!](./tests/output.png)
+fig.set_size_inches(12, 4, forward=True)
+plt.tight_layout()
+plt.show()
+```
+![output from above code!](./tests/output.png)
 
 ### A few final remarks
 
