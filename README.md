@@ -194,4 +194,4 @@ The syntax for this package needs to be consistent, intuitive, and clear. All da
 
 In addition, the package is divided into two module categories. (1) measurement methods, which are general purpose and do not reference any specific type of experiment, and (2) experimental methods, which is a space to add specific functionality on top of the measurement methods.
 
-For more information on python regular expressions (regexp), which are used to loader.load_ndim_measurement() to extract coordinate values, see [this nice tutorial](https://docs.python.org/3/howto/regex.html#regex-howto)
+For more information on python regular expressions (regexp), which are used with loader.load_ndim_measurement() to extract coordinate values, see [this nice tutorial](https://docs.python.org/3/howto/regex.html#regex-howto).
