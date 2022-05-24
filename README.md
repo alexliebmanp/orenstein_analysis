@@ -1,4 +1,4 @@
-orenstein-analysis is a functional python package for loading, processing, and manipulating hierarchical and multidimensional datasets in Joe Orenstein's optics laboratory at UC Berkeley. The best way to think about this packages is as a set of general tools to streamline scripting of new data pipelines and recycle code common to all analysis - most of the heavy lifting comes from xarray and the user can focus on writing only code that is specific to their experiment. See below for a quick example.
+`orenstein-analysis` is a functional python package for loading, processing, and manipulating hierarchical and multidimensional datasets in Joe Orenstein's optics laboratory at UC Berkeley. The best way to think about this packages is as a set of general tools to streamline scripting of new data pipelines and recycle code common to all analysis - most of the heavy lifting comes from xarray and the user can focus on writing only code that is specific to their experiment. See below for a quick example.
 
 The package builds on top of the xarray DataArray and Dataset data structures - for a good introduction to xarray see the [xarray Getting Started and User Guide](https://docs.xarray.dev/en/stable/getting-started-guide/index.html).
 
@@ -10,7 +10,7 @@ Briefly, xarray DataArrays are labeled, indexed wrappers around numpy ndarrays. 
 
 ### Data organization
 
-Although today there are many powerful databases for storing and organizing data (such as HDF5 or netCDF, which xarray is based on), for the sake of backward compatibility with existing methods of storing data, orenstein-analysis assumes the following structure for loading data.
+Although today there are many powerful databases for storing and organizing data (such as HDF5 or netCDF, which xarray is based on), for the sake of backward compatibility with existing methods of storing data, `orenstein-analysis` assumes the following structure for loading data.
 
 At the core of any optics measurement in the Orenstein Lab is a 1-dimensional dataset. For example, in a pump-probe measurement we measure some signal (and other observables or diagnostics) as a function of time-delay, which gets stored as a text file of the form:
 
@@ -37,7 +37,7 @@ The `loader.load_measurement()` function loads 1 dimensional data from a single 
 
 ### Workflow
 
-The intended workflow for orenstein-analysis reflects the underlying 1D nature of our experiments while still leaving options for post processing on multidimensional sets.
+The intended workflow for `orenstein-analysis` reflects the underlying 1D nature of our experiments while still leaving options for post processing on multidimensional sets.
 
 The main feature of `loader.load_measurement()` and `loader.load_ndim_measurement()` is the `instruction_set` **kwarg, which accepts a list of functions `[f1, f2, f3, ...]`. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if `ds` is the initial dataset, at the end of the loading operation the stored dataset is `f3(f2(f1(ds)))`. Following our example above, each time trace might be fit to a given functional for at each temperature and then the multidimensional Dataset will include a data variable containing the time constant as a function of temperature.
 
