@@ -4,9 +4,9 @@ The package builds on top of the xarray DataArray and Dataset data structures - 
 
 Briefly, xarray DataArrays are labeled, indexed wrappers around numpy ndarrays. In addition, there is a high-level distinction between data variables (ndarrays of dependent variables, for example temperature as function of x, y, and z), coordinate variables (ndarrays for independent variables, such as the x, y and z vectors), and dimensions (labels for each axis associated with a data or coordinate variable, such as 'x', 'y', and 'z'). Once data has been put into a Dataset, which is essentially a dictionary of DataArrays, working with the data is highly intuitive and simple. The choice to work with xarray is based on the following:
 
-(1) highly functional - for example, storing multidimensional datasets into one data structure reduces the task of processing and isolating desired sections of the data to a few lines of easy-to-read code, coordinates and dimensions are implicitly carried through operations which significantly simplifies code and makes it more readable.
-(2) general - xarray handles common low-level manipulation of arbitrary datasets so that users can focus on the specifics that differ from dataset to dataset.
-(3) extendable - easy to adopt new measurement modalities and datasets without having to rewrite or copy-paste
+1. highly functional - for example, storing multidimensional datasets into one data structure reduces the task of processing and isolating desired sections of the data to a few lines of easy-to-read code, coordinates and dimensions are implicitly carried through operations which significantly simplifies code and makes it more readable.
+2. general - xarray handles common low-level manipulation of arbitrary datasets so that users can focus on the specifics that differ from dataset to dataset.
+3.  extendable - easy to adopt new measurement modalities and datasets without having to rewrite or copy-paste
 
 ### Data organization
 
