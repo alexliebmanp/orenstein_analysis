@@ -8,6 +8,16 @@ Briefly, xarray DataArrays are labeled, indexed wrappers around numpy ndarrays. 
 2. general - xarray handles common low-level manipulation of arbitrary datasets so that users can focus on the specifics that differ from dataset to dataset.
 3.  extendable - easy to adopt new measurement modalities and datasets without having to rewrite or copy-paste
 
+### Setup
+
+To setup this package, firts make a GitHub account if you don't have one already and follow [this how-to](https://docs.github.com/en/authentication/connecting-to-github-with-ssh) to get setup with an SSH key. Then:
+
+1. install git. For homebrew users, run on command line: `brew install git`
+2. clone this repository. On the command line run: `git clone git@github.com:alexliebmanp/orenstein-analysis.git`
+3. add package path to PYTHONPATH variable of whatever terminal emulator or python IDE that you use. For example, follow [this](https://stackoverflow.com/questions/3402168/permanently-add-a-directory-to-pythonpath).
+
+Now you can easily import anything in the pacakge, e.g. `import orenstein_analysis`!
+
 ### Data organization
 
 Although today there are many powerful databases for storing and organizing data (such as HDF5 or netCDF, which xarray is based on), for the sake of backward compatibility with existing methods of storing data, `orenstein-analysis` assumes the following structure for loading data.
