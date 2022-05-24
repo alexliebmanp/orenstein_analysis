@@ -17,6 +17,7 @@ To setup this package, firts make a GitHub account if you don't have one already
 1. install git. For homebrew users, run on command line: `brew install git`
 2. clone this repository. On the command line run: `git clone git@github.com:alexliebmanp/orenstein-analysis.git`
 3. add package path to PYTHONPATH variable of whatever terminal emulator or python IDE that you use. For example, follow [this](https://stackoverflow.com/questions/3402168/permanently-add-a-directory-to-pythonpath).
+4. install python packages: xarray
 
 Now you can easily import anything in the pacakge, e.g. `import orenstein_analysis`!
 
