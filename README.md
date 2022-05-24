@@ -47,15 +47,23 @@ The `loader.load_measurement()` function loads 1 dimensional data from a single 
 
 ### Workflow
 
-The intended workflow for `orenstein-analysis` reflects the underlying 1D nature of our experiments while still leaving options for post processing on multidimensional sets.
+The intended workflow for `orenstein-analysis` reflects the underlying 1D nature of our experiments while still leaving options for post processing on multidimensional sets. A schematic of the workflow for a multidimensional dataset is as follows (works the same for 1D dataset):
 
-The main feature of `loader.load_measurement()` and `loader.load_ndim_measurement()` is the `instruction_set` **kwarg, which accepts a list of functions `[f1, f2, f3, ...]`. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if `ds` is the initial dataset, at the end of the loading operation the stored dataset is `f3(f2(f1(ds)))`.
+```mermaid
+flowchart LR
+  A["\data_directory"\npumpprobe_10K_100mW.txt\npumpprobe_20K_100mW.txt\npumpprobe_30K_100mW.txt] --> B[loader.load_ndim_measurement] --> C[Dataset ds\n1D data processed] --> D[process.add_processed] --> E[ds\n additional processing on top \n now in form to easily visualize or manipulate];
+  F[instruction_set] --> B; G["(function, arguments)"] --> D
+ ```
 
-As the example below illustrates, there are several types of functions that can be put into the `instruction_set`, however the function `process.add_processed()` is a useful utility that can be used to easily build such functions, among other things. It takes a measurement and a list of tuples of the form (function, arguments) and returns a modified Dataset with new data and coordinate variables according the output of function(measurement, *arguments). Each function must take a measurement as the first argument and returns data_vars and coord_vars, which are dictionaries for variables as specified in the xarray documentation (for example, data_var = {'new_var1':(dims, data)}). This may be a bit confusing, but once you get the hang of it it becomes very easily to quickly add new variables to the dataset through some processing. This is at the small cost of structuring user function arguments and returns.
+The main feature of `loader.load_measurement()` and `loader.load_ndim_measurement()` is the `instruction_set` kwarg, which accepts a list of functions `[f1, f2, f3, ...]`. These are functions, typically defined within an analysis notebook, which accept an xarray Dataset as the only argument and return a modified Dataset. Both loading functions sequentially process each 1-dimensional Dataset after importing, such that if `ds` is the initial dataset, at the end of the loading operation the stored dataset is `f3(f2(f1(ds)))`.
 
-Following our example above, each time trace might be fit to a given functional for at each temperature and then the multidimensional Dataset will include a data variable containing the time constant as a function of temperature.
+As the example below illustrates, there are several types of functions that can be put into the `instruction_set`, however the function `process.add_processed()` is a useful utility that can be used to easily build such functions, among other things. It takes a measurement and a list of tuples of the form (function, arguments) and returns a modified Dataset with new data and coordinate variables according the output of functions. Each function passed to `process.data_processed()` must take a measurement as the first argument and returns `data_vars` and `coord_vars`, which are dictionaries for variables as specified in the xarray documentation (for example, `data_var = {'new_var1':(dims, data)}`).
 
-In addition, the `process.add_processed()` function can be used to incoporate more elaborate processing, such as taking a 2D Fourier transforms on already processed data and adding the FT as well as the wave-vector coordinates to the Dataset.
+In addition, the `process.add_processed()` function can be used to incoporate more elaborate processing on multidimensaional data, such as taking a 2D Fourier transforms on already processed data and adding the FT as well as the wave-vector coordinates to the Dataset.
+
+These three functions, `loader.load_measurement()`, `loader.load_ndim_measurement()`, and `process.add_processed()` form the core of this package and with just these functions the main power of the package can be exploited.
+
+This may be a bit confusing, but once you get the hang of it it becomes very easy to quickly add new variables to the dataset through some processing. This is at the small cost of structuring user function arguments and returns in a standard way. Following our example above, each time trace might be fit to a given functional for at each temperature and then the multidimensional Dataset will include a data variable containing the time constant as a function of temperature.
 
 ### Example
 
