@@ -92,7 +92,7 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
             elif len(match_list)==2:
                 raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
             else:
-                p = re.compile('[0-9]*[\.]?[0-9]*') # matches arbitrary decimal value
+                p = re.compile('[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
                 val = float(p.search(match_list[0]).group())
                 coords[dimensions[ii]] = val
         measurement = process.add_dimensional_coordinates(measurement, coords)
