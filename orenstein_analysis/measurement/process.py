@@ -42,23 +42,23 @@ def add_data_to_measurement(measurement, data_vars=None, coord_vars=None):
             modified_measurement.coords[name] = coord_vars[name]
     return modified_measurement
 
-def add_processed(measurement, instruction_set):
+def add_processed(measurement, function_set):
     '''
-    Sequentially operate on measurement with function in instruction set and add new measurement variables according to the output of each function, which have the form of data_vars and coord_vars dictionaries with keys as names for new variables. The function take measurement as first argument.
+    Sequentially operate on measurement with function in function_set and add new measurement variables according to the output of each function, which have the form of data_vars and coord_vars dictionaries with keys as names for new variables. The function take measurement as first argument.
 
     Todo: figure out a good way to handle kwargs.
 
     args:
         - measurement(Dataset):
-        - instruction_set:              list of tuples (function, arguments)
+        - function_set:              list of tuples (function, arguments). each function must take measurement as first input and return data_vars and coord_vars.
 
     returns:
         - modified_measurement(Dataset)
     '''
     modified_measurement = measurement.copy()
-    if type(instruction_set) is tuple:
-        instruction_set = [instruction_set]
-    for (f, args) in instruction_set:
+    if type(function_set) is tuple:
+        function_set = [function_set]
+    for (f, args) in function_set:
         data_vars, coord_vars = f(measurement, *args)
         modified_measurement = add_data_to_measurement(modified_measurement, data_vars, coord_vars)
     return modified_measurement

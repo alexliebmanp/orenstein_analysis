@@ -11,7 +11,7 @@ def colormap_generator(min, max, cmap):
         args:
             - min: minimum value in colormap
             - max: maximum value in colormap
-            - cmap: colormap
+            - cmap: colormap object
         return:
             - colormap_func: function for evaluating color according to colormap
     '''
