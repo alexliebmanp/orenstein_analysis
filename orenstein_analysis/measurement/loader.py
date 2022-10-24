@@ -44,14 +44,14 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], da
                 else:
                     try:
                         data.append([float(li) for li in line.split()])
-                    except:
+                    except Exception:
+                        traceback.print_exc()
                         continue
     data_dictionary = data_to_dictionary(header, np.array(data))
     measurement = dictionary_to_dataset(data_dictionary, independent_variable)
     for operation in instruction_set:
         measurement = operation(measurement)
     return measurement
-
 
 def load_ndim_measurement(directory, dimensions_dict, independent_variable=None, instruction_set=[], data_start=0, print_flag=False):
     '''
@@ -117,7 +117,6 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     except Exception:
         traceback.print_exc()
         return measurement_list
-
 
 def data_to_dictionary(header, data):
     '''
