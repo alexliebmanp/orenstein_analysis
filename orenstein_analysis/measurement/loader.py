@@ -9,7 +9,10 @@ import xarray as xr
 import matplotlib.pyplot as plt
 import glob
 import re
+import os
 from orenstein_analysis.measurement import process
+import time
+import traceback
 
 def load_measurement(filename, independent_variable=None, instruction_set=[], data_start=0):
     '''
@@ -78,28 +81,42 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     data_files = glob.glob(directory+'*.dat')
     measurement_list = []
     #coords_list = []
+    num_files = 0
     for filename in data_files:
-        if print_flag==True:
-            print(filename)
-        measurement = load_measurement(filename, independent_variable, data_start=data_start)
-        for operation in instruction_set:
-            measurement = operation(measurement)
-        coords = {}
-        for ii, regexp in enumerate(regexp_list):
-            match_list = re.findall(regexp, filename)
-            if match_list == []:
-                raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
-            elif len(match_list)==2:
-                raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
-            else:
-                p = re.compile('[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
-                val = float(p.search(match_list[0]).group())
-                coords[dimensions[ii]] = val
-        measurement = process.add_dimensional_coordinates(measurement, coords)
-        measurement_list.append(measurement)
+        look_at_file = True
+        for regexp in regexp_list:
+            match = re.search(regexp, filename)
+            if not bool(match):
+                look_at_file = False
+        if look_at_file==True:
+            num_files = num_files + 1
+            #os.system('clear')
+            #print(f'Processing file {num_files} of {len(data_files)} files.')
+            if print_flag==True:
+                print(filename)
+            measurement = load_measurement(filename, independent_variable, data_start=data_start)
+            for operation in instruction_set:
+                measurement = operation(measurement)
+            coords = {}
+            for ii, regexp in enumerate(regexp_list):
+                match_list = re.findall(regexp, filename)
+                if match_list == []:
+                    raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
+                elif len(match_list)==2:
+                    raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
+                else:
+                    p = re.compile('[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
+                    val = float(p.search(match_list[0]).group())
+                    coords[dimensions[ii]] = val
+            measurement = process.add_dimensional_coordinates(measurement, coords)
+            measurement_list.append(measurement)
 
-        #coords_list.append(coords)
-    return xr.combine_by_coords(measurement_list)
+            #coords_list.append(coords)
+    try:
+        return xr.combine_by_coords(measurement_list)
+    except Exception:
+        traceback.print_exc()
+        return measurement_list
 
 
 def data_to_dictionary(header, data):
