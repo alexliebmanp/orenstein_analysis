@@ -11,7 +11,7 @@ import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
 
-def add_data_to_measurement(measurement, data_vars=None, coord_vars=None):
+def add_data_to_measurement(measurement, data_vars={}, coord_vars={}):
     '''
     This function handles one of the most basic operations you can do to a measurement: add a layer of data variables and coordinate variables to the dataset. This is essentially a wrapper around the expressions:
 
@@ -30,12 +30,12 @@ def add_data_to_measurement(measurement, data_vars=None, coord_vars=None):
         - coord_vars:               same form as data_vars, but for coordinate variables.
     '''
     modified_measurement = measurement.copy()
-    if data_vars == None:
+    if data_vars == {}:
         pass
     else:
         for name in list(data_vars):
             modified_measurement[name] = data_vars[name]
-    if coord_vars == None:
+    if coord_vars == {}:
         pass
     else:
         for name in list(coord_vars):

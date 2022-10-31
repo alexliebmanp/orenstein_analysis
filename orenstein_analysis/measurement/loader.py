@@ -55,7 +55,7 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], da
         measurement = operation(measurement)
     return measurement
 
-def load_ndim_measurement(directory, dimensions_dict, independent_variable=None, instruction_set=[], data_start=0, print_flag=False):
+def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_string='', independent_variable=None, instruction_set=[], data_start=0, print_flag=False):
     '''
     parses a directory for textfiles and stores data as a multidimensional Dataset, where each dimension is assigned based on parsing filenames according to regexp_list or via metadata contained in each data file. In addition, a list of functions can be passed to this method which act sequentially to raw data in order to process it as it gets loaded.
 
@@ -75,11 +75,15 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
 
     **kwargs:
         - independent_variable(string):     name for independent variable to be used as the coordinate axis. If set to None, returns dataset without specifying coordinates.
+        - search_string:                    additional string that filename must match
+        - datavars_dict:                        a dictionary like dimensions_dict that parses the filename and extracts value, adding to dataset as a data variable
         - instruction_set(functions):       list of functions to sequentially operate on each imported Dataset from left to right. Functions must take a Dataset as the only argument and return another Dataset.
         - print_flag(bool):                      if True, prints filenames as they get processed. Mainly for troubleshooting.
     '''
     dimensions = list(dimensions_dict)
     regexp_list = list(dimensions_dict.values())
+    datavars = list(datavars_dict)
+    dregexp_list = list(datavars_dict.values())
     data_files = glob.glob(directory+'*.dat')
     measurement_list = []
     #coords_list = []
@@ -90,8 +94,19 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
             match = re.search(regexp, filename)
             if not bool(match):
                 look_at_file = False
+        for regexp in dregexp_list:
+            match = re.search(regexp, filename)
+            if not bool(match):
+                look_at_file = False
+        if search_string!='':
+            match = re.search(search_string, filename)
+            if not bool(match):
+                look_at_file = False
         if look_at_file==True:
             lookat_files.append(filename)
+    if len(lookat_files)==0:
+        print('No files match search criteria.')
+        return 0
     num_files = len(lookat_files)
     for ii in tqdm(range(num_files)):
         filename = lookat_files[ii]
@@ -100,14 +115,22 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
         if print_flag==True:
             print(filename)
         measurement = load_measurement(filename, independent_variable, data_start=data_start)
+        data_vars = {}
+        for ii, dregexp in enumerate(dregexp_list):
+            match_list = re.findall(dregexp, filename)
+            if len(match_list)==2:
+                raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
+            else:
+                p = re.compile('-?[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
+                val = float(p.search(match_list[0]).group())
+                data_vars[datavars[ii]] = val
+        measurement = process.add_data_to_measurement(measurement, data_vars=data_vars)
         for operation in instruction_set:
             measurement = operation(measurement)
         coords = {}
         for ii, regexp in enumerate(regexp_list):
             match_list = re.findall(regexp, filename)
-            if match_list == []:
-                raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
-            elif len(match_list)==2:
+            if len(match_list)==2:
                 raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
             else:
                 p = re.compile('-?[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
