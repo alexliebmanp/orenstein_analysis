@@ -13,6 +13,7 @@ import os
 from orenstein_analysis.measurement import process
 import time
 import traceback
+from tqdm.auto import tqdm
 
 def load_measurement(filename, independent_variable=None, instruction_set=[], data_start=0):
     '''
@@ -45,8 +46,9 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], da
                     try:
                         data.append([float(li) for li in line.split()])
                     except Exception:
+                        print(f'Execption in file {filename} line {number}.')
                         traceback.print_exc()
-                        continue
+                        break
     data_dictionary = data_to_dictionary(header, np.array(data))
     measurement = dictionary_to_dataset(data_dictionary, independent_variable)
     for operation in instruction_set:
@@ -81,7 +83,7 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
     data_files = glob.glob(directory+'*.dat')
     measurement_list = []
     #coords_list = []
-    num_files = 0
+    lookat_files = []
     for filename in data_files:
         look_at_file = True
         for regexp in regexp_list:
@@ -89,29 +91,32 @@ def load_ndim_measurement(directory, dimensions_dict, independent_variable=None,
             if not bool(match):
                 look_at_file = False
         if look_at_file==True:
-            num_files = num_files + 1
-            #os.system('clear')
-            #print(f'Processing file {num_files} of {len(data_files)} files.')
-            if print_flag==True:
-                print(filename)
-            measurement = load_measurement(filename, independent_variable, data_start=data_start)
-            for operation in instruction_set:
-                measurement = operation(measurement)
-            coords = {}
-            for ii, regexp in enumerate(regexp_list):
-                match_list = re.findall(regexp, filename)
-                if match_list == []:
-                    raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
-                elif len(match_list)==2:
-                    raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
-                else:
-                    p = re.compile('[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
-                    val = float(p.search(match_list[0]).group())
-                    coords[dimensions[ii]] = val
-            measurement = process.add_dimensional_coordinates(measurement, coords)
-            measurement_list.append(measurement)
+            lookat_files.append(filename)
+    num_files = len(lookat_files)
+    for ii in tqdm(range(num_files)):
+        filename = lookat_files[ii]
+        #os.system('clear')
+        #print(f'Processing file {num_files} of {len(data_files)} files.')
+        if print_flag==True:
+            print(filename)
+        measurement = load_measurement(filename, independent_variable, data_start=data_start)
+        for operation in instruction_set:
+            measurement = operation(measurement)
+        coords = {}
+        for ii, regexp in enumerate(regexp_list):
+            match_list = re.findall(regexp, filename)
+            if match_list == []:
+                raise ValueError('no match found for regexp '+regexp+' in filename '+filename)
+            elif len(match_list)==2:
+                raise ValueError('multiple matches found for regexp '+regexp+' in filename '+filename)
+            else:
+                p = re.compile('-?[0-9]+[\.]?[0-9]*') # matches arbitrary decimal value
+                val = float(p.search(match_list[0]).group())
+                coords[dimensions[ii]] = val
+        measurement = process.add_dimensional_coordinates(measurement, coords)
+        measurement_list.append(measurement)
 
-            #coords_list.append(coords)
+    #coords_list.append(coords)
     try:
         return xr.combine_by_coords(measurement_list)
     except Exception:
@@ -193,3 +198,31 @@ def reshape_from_coordinates(obj_list, coords_list):
         -
         -
     '''
+
+def save_data_to_file(fname, data, header, metadata=None):
+    '''
+    utility function for saving data to a file, with optional metadata
+
+    args:
+        - fname(string):           full path to datafile
+        - data(array):             (n,m) array containing data
+        - header(array):           (m) array of strings labeling each column
+        - metadata(dict):          a dictionary of parameters to store at the top of the datafile under [Metadata]
+
+    returns: None
+    '''
+    if not(len(header) == len(data[0,:])):
+        raise ValueError('number of header items does not match number of data columns.')
+    with open(fname, 'w') as f:
+        if not(metadata==None):
+            f.write('[METADATA]\n')
+            for key, value in list(metadata.keys()):
+                f.write(f'{key}:\t{value}\n')
+            f.write('[DATA]\n')
+        for item in header:
+            f.write(str(item)+'\t')
+        f.write('\n')
+        for line in data:
+            for item in line:
+                f.write(str(item)+'\t')
+            f.write('\n')

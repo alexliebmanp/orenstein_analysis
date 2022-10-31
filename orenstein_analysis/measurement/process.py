@@ -112,3 +112,33 @@ def add_dimensional_coordinates(measurement, coordinates):
         for data_var in list(measurement.data_vars):
             modified_measurement[data_var] = modified_measurement[data_var].expand_dims(dim=coord_name)
     return modified_measurement
+
+def reshape(measurement, coordinates):
+    '''
+        Takes a measurement with N-dimensional data stored as 1D and reshapes according to coordinates list. That, is for each label in coordinates, it treats that as a dimensional coordinate.
+
+        args:
+            - measurement:  1D measurement
+            - coordinates:  list of data variables by which to reshape
+    '''
+    data_variables = list(measurement.data_vars.keys())
+    coords_dict = {}
+    coords_dims = []
+    for coord in coordinates:
+        coord_array = measurement[coord]
+        coord_vect = np.unique(coord_array.values)
+        coord_dim = len(coord_vect)
+        coords_dict[coord] = coord_vect
+        coords_dims.append(coord_dim)
+        data_variables.remove(coord)
+    reshape_tuple = tuple(coords_dims)
+
+    data_vars_dict = {}
+    for data_var in data_variables:
+        data = measurement[data_var].values
+        data = np.reshape(data, reshape_tuple)
+        data_vars_dict[data_var] = (coordinates, data)
+
+    reshaped_measurement = xr.Dataset(data_vars=data_vars_dict, coords=coords_dict)
+
+    return reshaped_measurement
