@@ -1,9 +1,10 @@
 # ignore ALL pycache files
 *.pyc
 
-# ignore ALL files in ANY directory named..
-experiment/_pycache_
-measurement/_pycache_
+# ignore ALL files in ANY directory named.
+__pycache__/
+experiment/__pycache__/
+measurement/__pycache__/
 
 # ignore attocube handle file
 attocube_handle
