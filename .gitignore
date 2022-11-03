@@ -1,0 +1,15 @@
+# ignore ALL pycache files
+*.pyc
+
+# ignore ALL files in ANY directory named..
+experiment/_pycache_
+measurement/_pycache_
+
+# ignore attocube handle file
+attocube_handle
+
+# ignore config file
+Configuration.txt
+
+# other files that pop up:
+.DS_Store

@@ -85,6 +85,9 @@ def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_s
     datavars = list(datavars_dict)
     dregexp_list = list(datavars_dict.values())
     data_files = glob.glob(directory+'*.dat')
+    if len(data_files)==0:
+        print ('No files found, check path.')
+        return 0
     measurement_list = []
     #coords_list = []
     lookat_files = []
