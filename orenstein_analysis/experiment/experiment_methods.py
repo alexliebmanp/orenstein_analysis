@@ -51,7 +51,6 @@ def fit_birefringence(measurement, x_var, y_var, p0=None):
     data_vars[y_var+' (fit)'] = ((x_var+' (fit)'), yfit)
     return data_vars, coord_vars
 
-
 def redefine_fit_angles(params):
     '''
     helper function for fit_birefringence(), which

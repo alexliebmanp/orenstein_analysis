@@ -10,6 +10,7 @@ import numpy as np
 import pandas as pd
 import xarray as xr
 import matplotlib.pyplot as plt
+import traceback
 
 def add_data_to_measurement(measurement, data_vars={}, coord_vars={}):
     '''
@@ -62,6 +63,44 @@ def add_processed(measurement, function_set):
         data_vars, coord_vars = f(measurement, *args)
         modified_measurement = add_data_to_measurement(modified_measurement, data_vars, coord_vars)
     return modified_measurement
+
+def add_processed_nd(measurement, function_set, coord_vars=[]):
+    '''
+    General utility for processing data after loading.
+
+    Takes a measurement (Dataset) and for all values of data variables that are not in coords, acts the function_set and adds processed data to Dataset as function of all data variables in data_vars. Coords must be dimensional coordinates!
+
+    args:
+        - measurement(Dataset):
+        - function_set:              list of tuples (function, arguments). each function must take measurement as first input and return data_vars and coord_vars.
+
+    returns:
+        - modified_measurement(Dataset)
+    '''
+
+    if coord_vars==[]:
+        coord_vars = list(measurement.coords)
+    if type(function_set) is tuple:
+        function_set = [function_set]
+    coord_data = []
+    measurement_list = []
+    for coord in coord_vars:
+        coord_data.append(measurement[coord].data)
+    coord_vals = gen_coordinates_recurse(coord_data, len(coord_data)-1)
+    for vals in coord_vals:
+            coords_dict = {}
+            for ii, coord in enumerate(coord_vars):
+                coords_dict[coord] = vals[ii]
+            sub_measurement = measurement.sel(coords_dict)
+            sub_measurement.drop_vars(coord_vars)
+            modified_measurement = add_processed(sub_measurement, function_set)
+            modified_measurement = add_dimensional_coordinates(modified_measurement, coords_dict)
+            measurement_list.append(modified_measurement)
+    try:
+        return xr.combine_by_coords(measurement_list)
+    except Exception:
+        traceback.print_exc()
+        return measurement_list
 
 def define_dimensional_coordinates(measurement, coordinates):
     '''
@@ -151,3 +190,27 @@ def reshape(measurement, coordinates):
     reshaped_measurement = xr.Dataset(data_vars=data_vars_dict, coords=coords_dict)
 
     return reshaped_measurement
+
+def gen_coordinates_recurse(range_list, n, pos_list=[], current_pos=None):
+    '''    given an empty pos_list, and a range_list, recursively generates a list of positions that span the spacce in range_list. Note that positions are written from first entry in range_list to last.
+
+    args:
+        - range_list:       a list of np arrays, where each array is a range of interest.
+        - n:                max index of arrays in range_list, needed for recursion
+        - post_list:        should be an empty list which the function will append to
+        - current_pos:      n+1 dim array that carries around the positions to append for each recursive iteration.
+
+    returns:
+        - post_list
+    '''
+    if n==len(range_list)-1:
+        current_pos = np.asarray([i[0] for i in range_list])#np.asarray(range_list)[:,0]
+        pos_list = []
+    if n>=0:
+        for i in range_list[n]:
+            current_pos[n] = i
+            pos_list = gen_coordinates_recurse(range_list, n-1, pos_list, current_pos)
+    else:
+        pos_list.append(np.copy(current_pos))
+
+    return pos_list
