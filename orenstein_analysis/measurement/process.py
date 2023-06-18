@@ -57,10 +57,19 @@ def add_processed(measurement, function_set):
         - modified_measurement(Dataset)
     '''
     modified_measurement = measurement.copy()
-    if type(function_set) is tuple:
+    if type(function_set) is tuple or hasattr(function_set, '__call__'):
         function_set = [function_set]
-    for (f, args) in function_set:
-        data_vars, coord_vars = f(measurement, *args)
+    for fs in function_set:
+        if hasattr(fs, '__call__'):
+            f = fs
+            args=None
+        else:
+            f = fs[0]
+            args=fs[1]
+        if args==None:
+            data_vars, coord_vars = f(measurement)
+        else:
+            data_vars, coord_vars = f(measurement, *args)
         modified_measurement = add_data_to_measurement(modified_measurement, data_vars, coord_vars)
     return modified_measurement
 
@@ -68,7 +77,7 @@ def add_processed_nd(measurement, function_set, coord_vars=[]):
     '''
     General utility for processing data after loading.
 
-    Takes a measurement (Dataset) and for all values of data variables that are not in coords, acts the function_set and adds processed data to Dataset as function of all data variables in data_vars. Coords must be dimensional coordinates!
+    Takes a measurement (Dataset) and for all values of data variables that are in coord_vars, acts the function_set and adds processed data to Dataset as function of all data variables not in data_vars. Coords must be dimensional coordinates!
 
     args:
         - measurement(Dataset):
@@ -82,14 +91,17 @@ def add_processed_nd(measurement, function_set, coord_vars=[]):
         coord_vars = list(measurement.coords)
     if type(function_set) is tuple:
         function_set = [function_set]
+    other_coord_vars = list(measurement.coords)
+    for coord in coord_vars:
+        other_coord_vars.remove(coord)
     coord_data = []
     measurement_list = []
-    for coord in coord_vars:
+    for coord in other_coord_vars:
         coord_data.append(measurement[coord].data)
     coord_vals = gen_coordinates_recurse(coord_data, len(coord_data)-1)
     for vals in coord_vals:
             coords_dict = {}
-            for ii, coord in enumerate(coord_vars):
+            for ii, coord in enumerate(other_coord_vars):
                 coords_dict[coord] = vals[ii]
             sub_measurement = measurement.sel(coords_dict)
             sub_measurement.drop_vars(coord_vars)
@@ -158,9 +170,9 @@ def reshape(measurement, coordinates):
 
         args:
             - measurement:  1D measurement
-            - coordinates:  list of data variables by which to reshape
+            - coordinates:  list of data or coord variables by which to reshape
     '''
-    data_variables = list(measurement.data_vars.keys())
+    data_variables = list(measurement.data_vars.keys())+list(measurement.coords.keys())
     for coord in coordinates:
         if coord not in data_variables:
             raise ValueError(f'Invalid coordinate {coord}. Please choose from list {data_variables}')

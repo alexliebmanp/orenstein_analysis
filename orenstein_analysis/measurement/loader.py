@@ -143,11 +143,52 @@ def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_s
         measurement_list.append(measurement)
 
     #coords_list.append(coords)
+    #measurement_list = match_measurement_length_1D(measurement_list)
     try:
         return xr.combine_by_coords(measurement_list)
     except Exception:
         traceback.print_exc()
         return measurement_list
+
+def match_measurement_length_1D(measurement_list):
+    '''
+    pads data arrays in measurements from measurement_list to match longest data array and replaces coordinates with longest coordinate array. This allows a combine_by_coords operation for measurement sets with different lengths. Assumes data spacing in each measurement is equivalent, all keys are the same, and all coordinate arrays are the same (up to extrapolation)
+
+    Under construction
+    '''
+
+    measurement_list_mod = []
+    key = list(measurement_list[0].data_vars)[0]
+    maxlen = 0
+    maxind = 0
+    lens = np.zeros(len(measurement_list))
+    for ii, meas in enumerate(measurement_list):
+        curlen = len(meas[key].data[-1])
+        lens[ii] = curlen
+        if curlen > maxlen:
+            maxlen=curlen
+            maxind=ii
+
+    template_meas = measurement_list[ii]
+    coords = list(template_meas.coords)
+    data_vars = list(template_meas.data_vars)
+    new_coords = [template_meas[coord].data for coord in coords]
+    for ii, meas in enumerate(measurement_list):
+        meas_mod = meas.copy()
+        if lens[ii] < maxlen:
+            for jj, coord in enumerate(coords):
+                #meas_mod[coord].data = new_coords[jj]
+                pass
+            for data_var in data_vars:
+                data = meas_mod[data_var].data
+                data_mod = np.pad(data[-1], ((0,int(maxlen-lens[ii]))))
+                meas_mod.assign(data_var=data_mod)
+        measurement_list_mod.append(meas_mod)
+
+    for meas in measurement_list_mod:
+        print(meas[key].data.shape)
+
+    return measurement_list_mod
 
 def data_to_dictionary(header, data):
     '''

@@ -28,8 +28,8 @@ def fit_birefringence(measurement, x_var, y_var, p0=None):
     *kwargs:
         - p0:                       list of arguments
     '''
-    x = measurement[x_var].data
-    y = measurement[y_var].data
+    x = measurement[x_var].data.flatten()
+    y = measurement[y_var].data.flatten()
     f = lambda var, a2, phi2, a1, phi1, b: a1*np.sin(2*(var+phi1)/180*np.pi) + a2*np.sin(4*(var+phi2)/180*np.pi) + b
     if p0==None:
         a10 = (1/2)*np.max(y)
@@ -42,13 +42,13 @@ def fit_birefringence(measurement, x_var, y_var, p0=None):
     xfit = np.linspace(x[0], x[-1],1000)
     yfit = np.asarray([f(i, *popt) for i in xfit])
     popt = redefine_fit_angles(popt)
-    names = ['4Theta Amplitude', '4Theta Angle', 'Birefringence Amplitude', 'Birefringence Angle', 'Birefringence Offset']
+    names = [f'4Theta Amplitude ({y_var})', f'4Theta Angle ({y_var})', f'Birefringence Amplitude ({y_var})', f'Birefringence Angle ({y_var})', f'Birefringence Offset ({y_var})']
     data_vars = {}
     coord_vars= {}
     for ii, name in enumerate(names):
         data_vars[name] = ((), popt[ii])
-    coord_vars[x_var+' (fit)'] = xfit
-    data_vars[y_var+' (fit)'] = ((x_var+' (fit)'), yfit)
+    coord_vars[x_var+f' ({y_var} fit)'] = xfit
+    data_vars[y_var+' (fit)'] = ((x_var+f' ({y_var} fit)'), yfit)
     return data_vars, coord_vars
 
 def redefine_fit_angles(params):
