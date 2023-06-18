@@ -176,10 +176,6 @@ def reshape(measurement, coordinates):
     for coord in coordinates:
         if coord not in data_variables:
             raise ValueError(f'Invalid coordinate {coord}. Please choose from list {data_variables}')
-<<<<<<< HEAD
-=======
-    coordinates_temp = []
->>>>>>> 0ddd445f43cc105fb1976a9b0ed872838fbe40bf
     coordinates.reverse()
     coords_dict = {}
     coords_dims = []
