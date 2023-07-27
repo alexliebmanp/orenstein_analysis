@@ -15,7 +15,7 @@ import time
 import traceback
 from tqdm.auto import tqdm
 
-def load_measurement(filename, independent_variable=None, instruction_set=[], data_start=0):
+def load_measurement(filename, independent_variable=None, instruction_set=[], add_metadata=True):
     '''
     loads a textfile data into a Dataset based on the headers. By default, this import method treats all data columns as dependent variables and the coordinates are with respect to some arbitrary integer independent variable. Alternatively, an independent variable can be specified.
 
@@ -31,16 +31,28 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], da
         - independent_variable(string): name for independent variable to be used as the coordinate axis. If set to None, returns dataset without specifying coordinates.
         - instruction_set(func): list of functions to sequentially operate on each imported Dataset from left to right. Functions must take a Dataset as the only argument and return another Dataset.
     '''
+
     data = []
     header = []
-    metadata = [] # add in later
-    metaheader = []
+    metadata = {}
+    read_head = 'Data'
+    data_start = 0
+    metadata_start = 0
     with open(filename, 'r') as fromfile:
         for number, line in enumerate(fromfile):
-            if number<data_start:
-                continue
+            if '[Metadata]' in line:
+                read_head = 'Metadata'
+                metadata_start = number+1
+            elif '[Data]' in line:
+                read_head = 'Data'
+                data_start = number+1
             else:
-                if number == data_start:
+                if read_head == 'Metadata':
+                    property, val = line.split(':\t')
+                    if val=='None\n':
+                        val = np.nan
+                    metadata[property] = float(val)
+                elif read_head == 'Data' and number == data_start:
                     header = line.strip().split('\t')
                 else:
                     try:
@@ -51,6 +63,8 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], da
                         break
     data_dictionary = data_to_dictionary(header, np.array(data))
     measurement = dictionary_to_dataset(data_dictionary, independent_variable)
+    if add_metadata:
+        measurement.attrs = metadata
     for operation in instruction_set:
         measurement = operation(measurement)
     return measurement
