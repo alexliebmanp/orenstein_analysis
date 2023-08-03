@@ -69,7 +69,7 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], ad
         measurement = operation(measurement)
     return measurement
 
-def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_string='', independent_variable=None, instruction_set=[], data_start=0, print_flag=False):
+def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_string='', independent_variable=None, instruction_set=[], add_metadata=True, print_flag=False):
     '''
     parses a directory for textfiles and stores data as a multidimensional Dataset, where each dimension is assigned based on parsing filenames according to regexp_list or via metadata contained in each data file. In addition, a list of functions can be passed to this method which act sequentially to raw data in order to process it as it gets loaded.
 
@@ -131,7 +131,7 @@ def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_s
         #print(f'Processing file {num_files} of {len(data_files)} files.')
         if print_flag==True:
             print(filename)
-        measurement = load_measurement(filename, independent_variable, data_start=data_start)
+        measurement = load_measurement(filename, independent_variable, add_metadata=add_metadata)
         data_vars = {}
         for ii, dregexp in enumerate(dregexp_list):
             match_list = re.findall(dregexp, filename)

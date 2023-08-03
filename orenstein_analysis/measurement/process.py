@@ -9,6 +9,7 @@ process.py
 import numpy as np
 import pandas as pd
 import xarray as xr
+import itertools as iter
 import matplotlib.pyplot as plt
 import traceback
 
@@ -179,19 +180,33 @@ def reshape(measurement, coordinates):
     coordinates.reverse()
     coords_dict = {}
     coords_dims = []
+    coords_vects = []
+    coords_indx_vects = []
     for coord in coordinates:
         coord_array = measurement[coord]
         coord_vect = np.unique(coord_array.values)
         coord_dim = len(coord_vect)
         coords_dict[coord] = coord_vect
         coords_dims.append(coord_dim)
+        coords_vects.append(coord_vect)
+        coords_indx_vects.append(np.arange(coord_dim))
         data_variables.remove(coord)
     reshape_tuple = tuple(coords_dims)
+    positions = list(iter.product(*coords_vects))
+    indices = list(iter.product(*coords_indx_vects))
 
     data_vars_dict = {}
     for data_var in data_variables:
-        data = measurement[data_var].values
-        data = np.reshape(data, reshape_tuple)
+        #data = measurement[data_var].values
+        #data = np.reshape(data, reshape_tuple)
+        data = np.zeros(reshape_tuple)
+        for ii, p in enumerate(positions):
+            sel_dict = {}
+            indx = indices[ii]
+            for jj, coord in enumerate(coordinates):
+                sel_dict[coord] = p[jj]
+            try:
+                data[indx] = measurement[data_var].sel(sel_dict)
         data_vars_dict[data_var] = (coordinates, data)
 
     reshaped_measurement = xr.Dataset(data_vars=data_vars_dict, coords=coords_dict)
