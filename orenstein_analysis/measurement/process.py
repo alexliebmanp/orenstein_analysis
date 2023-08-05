@@ -182,7 +182,6 @@ def reshape(measurement, coordinates):
     coords_dict = {}
     coords_dims = []
     coords_vects = []
-    coords_indx_vects = []
     for coord in coordinates:
         coord_array = measurement[coord]
         coord_vect = np.unique(coord_array.values)
@@ -190,52 +189,36 @@ def reshape(measurement, coordinates):
         coords_dict[coord] = coord_vect
         coords_dims.append(coord_dim)
         coords_vects.append(coord_vect)
-        coords_indx_vects.append(np.arange(coord_dim))
         data_variables.remove(coord)
     reshape_tuple = tuple(coords_dims)
-    positions = list(iter.product(*coords_vects))
-    indices = list(iter.product(*coords_indx_vects))
 
-    filtered_datasets = []
-    for p in positions:
-        sel_dict = {}
-        for jj, coord in enumerate(coordinates):
-            sel_dict[coord] = p[jj]
-        filtered_dataset = filter_1Ddataset(measurement, sel_dict)
-        filtered_datasets.append(filtered_dataset)
-
-    data_vars_dict = {}
+    # prepare the data_vars data bins
+    data_vars_data = []
     for data_var in data_variables:
         data = np.zeros(reshape_tuple)
-        for ii, indx in enumerate(indices):
-            filtered_dataset, found_match = filtered_datasets[ii]
-            if found_match:
-                data[*list(indx)] = filtered_dataset[data_var].data[0]
+        data_vars_data.append(data)
+
+    # loop through each line of measurement and update data
+    num_points = len(measurement[data_variables[0]].data)
+    for i in range(num_points):
+        indx = []
+        for ii, coord in enumerate(coordinates):
+            coord_val = measurement[coord].data[i]
+            coord_indx = np.where(coords_vects[ii]==coord_val)
+            indx.append(coord_indx)
+        for jj, data_var in enumerate(data_variables):
+            data_val = measurement[data_var].data[i]
+            data_vars_data[jj][*indx] = data_val
+
+    # create data_vars dict
+    data_vars_dict = {}
+    for ii, data_var in enumerate(data_variables):
+        data = data_vars_data[ii]
         data_vars_dict[data_var] = (coordinates, data)
 
     reshaped_measurement = xr.Dataset(data_vars=data_vars_dict, coords=coords_dict, attrs=attrs)
 
     return reshaped_measurement
-
-def filter_1Ddataset(dataset, variable_values):
-    '''
-    Helper function for reshape
-    '''
-    filtered_indices = set()
-    for var_name, value in variable_values.items():
-        if var_name in dataset:
-            var_data = dataset[var_name].values  # Extract values from DataArray
-            matching_indices = [i for i, val in enumerate(var_data) if val == value]
-            if filtered_indices==set():
-                filtered_indices = set(matching_indices)
-            else:
-                filtered_indices &= set(matching_indices)
-
-    if filtered_indices!=set():
-        filtered_vars = {var_name: var_data[list(filtered_indices)] for var_name, var_data in dataset.items()}
-        return xr.Dataset(filtered_vars), True
-    else:
-        return xr.Dataset(), False
 
 def gen_coordinates_recurse(range_list, n, pos_list=[], current_pos=None):
     '''    given an empty pos_list, and a range_list, recursively generates a list of positions that span the spacce in range_list. Note that positions are written from first entry in range_list to last.
