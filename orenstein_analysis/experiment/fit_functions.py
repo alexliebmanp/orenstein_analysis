@@ -3,6 +3,10 @@ import matplotlib.pyplot as plt
 from numpy.lib.polynomial import poly
 from inspect import signature
 
+####################
+### Peak fitting ###
+####################
+
 def gauss(x, a, x0, s):
     """
     Gaussian peak function.
@@ -44,7 +48,6 @@ def npoly_func(npoly):
 
     return lambda x, *A: np.sum([A[ii]*x**ii for ii in range(npoly)], axis = 0)
 
-
 def npk_func(npk, peak_type=0):
     """
     Multi-peak function using Lorentzian (0) or Gaussian (1) peaks
@@ -56,7 +59,6 @@ def npk_func(npk, peak_type=0):
     peak_function, nparams = get_peak_type(peak_type)
 
     return lambda x,*A: np.sum([peak_function(x,*A[nparams*ii:(nparams)*(ii+1)]) for ii in range(npk)],axis = 0)
-
 
 def npoly_npk(npks, npoly, peak_type=0):
     """
@@ -76,7 +78,6 @@ def npoly_npk(npks, npoly, peak_type=0):
     peak_function, nparams = get_peak_type(peak_type)
 
     return lambda x, *A: npoly_func(npoly)(x,*A[:npoly]) + npk_func(npks, peak_type=peak_type)(x,*A[npoly:])
-
 
 def get_peak_type(peak_type):
     """
@@ -106,3 +107,85 @@ def get_peak_type(peak_type):
     nparams = len(peak_signature.parameters) - 1
 
     return peak_function, nparams
+
+########################
+### Fourier Analysis ###
+########################
+
+def damped_cos_phi(x, f0, g, A, phi):
+    '''
+    Damped oscillatory function
+    '''
+    return A*np.exp(-x*g)*np.cos(2*np.pi*f0*x+phi)
+
+def FFT_damped_sin(f, f0, g, A):
+    '''
+    Fourier transform of damped sine function
+    '''
+    return A*f0*(np.pi*2)/((g+1j*f*np.pi*2)**2+(f0*np.pi*2)**2)
+
+def FFT_damped_cos(f, f0, g, A):
+    '''
+    Fourier transform of damped sine function
+    '''
+    return A*(g+1j*(2*np.pi*f))/((g+1j*f*np.pi*2)**2+(f0*np.pi*2)**2)
+
+def FFT_damped_cos_phi(f, f0, g, A, phi):
+    '''
+    Fourier transform of damped sinusoid with a phase
+    '''
+    return A*np.cos(phi)*FFT_damped_cos(f, f0, g, A) - A*np.sin(phi)*FFT_damped_sin(f, f0, g, A)
+
+def over_damped(x, f0, g, A1, A2):
+    '''
+    Over damped oscillator
+    '''
+    u1=g-np.sqrt(g**2-(2*np.pi*f0)**2)
+    u2=g+np.sqrt(g**2-(2*np.pi*f0)**2)   
+    return A1*np.exp(-x*u1)+A2*np.exp(-x*u2)
+
+def FFT_over_damped(f, f0, g, A1, A2):
+    '''
+    Fourier transform of over damped oscillator
+    '''
+    u1=g-np.sqrt(g**2-(2*np.pi*f0)**2)
+    u2=g+np.sqrt(g**2-(2*np.pi*f0)**2)
+    return A1/(u1+1j*2.*np.pi*f)+A2/(u2+1j*2.*np.pi*f)
+
+def ndamped_osc(n_damped, n_over_damped):
+    '''
+    Function of arbitrary combinations of damped and overdamped oscillators
+    '''
+    def func(x,params):
+        fun=0
+        c, params1, params2 = params[0], params[1:4*n_damped+1], params[4*n_damped+1:]
+        # Number of damped modes 
+        for ii in range (0, n_damped):
+            fun = fun+damped_cos_phi(x,*params1[(0+ii*4):(4+ii*4)])
+            
+        # Number of overdamped modes 
+        for jj in range (0, n_over_damped):
+            fun = fun+over_damped(x,*params2[(0+jj*4):(4+jj*4)])
+            
+        return fun + c
+
+    return func
+
+def FFT_ndamped_osc(n_damped, n_over_damped):
+    '''
+    Function of arbitrary combinations of damped and overdamped oscillators
+    '''
+    def func(x,params):
+        fun=0
+        c, params1, params2 = params[0], params[1:4*n_damped+1], params[4*n_damped+1:]
+        # Number of damped modes 
+        for ii in range (0, n_damped):
+            fun = fun+FFT_damped_cos_phi(x,*params1[(0+ii*4):(4+ii*4)])
+            
+        # Number of overdamped modes 
+        for jj in range (0, n_over_damped):
+            fun = fun+FFT_over_damped(x,*params2[(0+jj*4):(4+jj*4)])
+            
+        return fun #+c
+
+    return func

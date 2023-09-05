@@ -159,7 +159,7 @@ def load_ndim_measurement(directory, dimensions_dict, datavars_dict={}, search_s
     #coords_list.append(coords)
     #measurement_list = match_measurement_length_1D(measurement_list)
     try:
-        return xr.combine_by_coords(measurement_list)
+        return xr.combine_by_coords(measurement_list, combine_attrs='override')
     except Exception:
         traceback.print_exc()
         return measurement_list

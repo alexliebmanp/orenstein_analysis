@@ -13,7 +13,7 @@ import itertools as iter
 import matplotlib.pyplot as plt
 import traceback
 
-def add_data_to_measurement(measurement, data_vars={}, coord_vars={}):
+def add_data_to_measurement(measurement, data_vars={}, coord_vars={}, attrs={}):
     '''
     This function handles one of the most basic operations you can do to a measurement: add a layer of data variables and coordinate variables to the dataset. This is essentially a wrapper around the expressions:
 
@@ -42,6 +42,11 @@ def add_data_to_measurement(measurement, data_vars={}, coord_vars={}):
     else:
         for name in list(coord_vars):
             modified_measurement.coords[name] = coord_vars[name]
+    if attrs == {}:
+        pass
+    else:
+        for name in list(attrs):
+            modified_measurement.attrs[name] = attrs[name]
     return modified_measurement
 
 def add_processed(measurement, function_set):
@@ -68,17 +73,17 @@ def add_processed(measurement, function_set):
             f = fs[0]
             args=fs[1]
         if args==None:
-            data_vars, coord_vars = f(measurement)
+            data_vars, coord_vars, attrs = f(measurement)
         else:
-            data_vars, coord_vars = f(measurement, *args)
-        modified_measurement = add_data_to_measurement(modified_measurement, data_vars, coord_vars)
+            data_vars, coord_vars, attrs = f(measurement, *args)
+        modified_measurement = add_data_to_measurement(modified_measurement, data_vars, coord_vars, attrs)
     return modified_measurement
 
-def add_processed_nd(measurement, function_set, coord_vars=[]):
+def add_processed_nd(measurement, function_set, coord_vars=[], compute_vars=[]):
     '''
     General utility for processing data after loading.
 
-    Takes a measurement (Dataset) and for all values of data variables that are in coord_vars, acts the function_set and adds processed data to Dataset as function of all data variables not in data_vars. Coords must be dimensional coordinates!
+    Takes a measurement (Dataset) and for all values in compute_vars, acts the function_set as a function of coord_vars, and adds processed data to Dataset. Coords must be dimensional coordinates! If compute_vars=[], defaults to coord_vars of the dataset not in coord_vars (function input)
 
     args:
         - measurement(Dataset):
@@ -88,21 +93,22 @@ def add_processed_nd(measurement, function_set, coord_vars=[]):
         - modified_measurement(Dataset)
     '''
 
-    if coord_vars==[]:
-        coord_vars = list(measurement.coords)
     if type(function_set) is tuple:
         function_set = [function_set]
-    other_coord_vars = list(measurement.coords)
-    for coord in coord_vars:
-        other_coord_vars.remove(coord)
+    if coord_vars==[]:
+        coord_vars = list(measurement.coords)
+    if compute_vars==[]:
+        compute_vars = list(measurement.coords)
+        for coord in coord_vars:
+            compute_vars.remove(coord)
     coord_data = []
     measurement_list = []
-    for coord in other_coord_vars:
+    for coord in compute_vars:
         coord_data.append(measurement[coord].data)
     coord_vals = gen_coordinates_recurse(coord_data, len(coord_data)-1)
     for vals in coord_vals:
             coords_dict = {}
-            for ii, coord in enumerate(other_coord_vars):
+            for ii, coord in enumerate(compute_vars):
                 coords_dict[coord] = vals[ii]
             sub_measurement = measurement.sel(coords_dict)
             sub_measurement.drop_vars(coord_vars)
