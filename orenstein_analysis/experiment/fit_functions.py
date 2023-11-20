@@ -7,7 +7,7 @@ from inspect import signature
 ### Peak fitting ###
 ####################
 
-def gauss(x, a, x0, s):
+def gauss(x, x0, s, a):
     """
     Gaussian peak function.
 
@@ -22,7 +22,7 @@ def gauss(x, a, x0, s):
 
     return a*np.sqrt(1./(2*np.pi*s**2))*np.exp(-0.5*(x-x0)**2/s**2)
 
-def lorentz(x, a, x0, g):
+def lorentz(x, x0, g, a):
     """
     Lorentzian peak function.
 
@@ -60,7 +60,7 @@ def npk_func(npk, peak_type=0):
 
     return lambda x,*A: np.sum([peak_function(x,*A[nparams*ii:(nparams)*(ii+1)]) for ii in range(npk)],axis = 0)
 
-def npoly_npk(npks, npoly, peak_type=0):
+def npoly_npk(npoly, npks, peak_type=0):
     """
     Multi-peak function, defined with an arbitrary degree polynomial, combined
     with an arbitrary number of Lorentzian peak functions

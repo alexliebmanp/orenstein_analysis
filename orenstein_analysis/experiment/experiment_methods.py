@@ -81,6 +81,7 @@ def meas_fft(measurement, x_var, y_var, padding_fraction=1):
         freqs = freqs
     coord_vars[freqname] = freqs
     data_vars[f'FFT[{y_var}]'] = ((freqname), yfft)
+    data_vars[f'P[{y_var}]'] = ((freqname), np.abs(yfft)**2)
     data_vars[f'Re(FFT[{y_var}])'] = ((freqname), np.real(yfft))
     data_vars[f'Im(FFT[{y_var}])'] = ((freqname), np.imag(yfft))
     return data_vars, coord_vars, attrs
@@ -183,9 +184,44 @@ def fit_fft_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0
 
     return data_vars, coord_vars, attrs
 
+def fit_npoly_npk_meas(measurement, x_var, y_vars, npoly, npks, p0=None,  peak_type=0, freq_bounds=None, bounds=None):
+    '''
+    Under construction
+    '''
+
+    if type(y_vars) is not list:
+        y_vars = [y_vars]
+    x = measurement[x_var].data.flatten()
+    ys = [measurement[y_var].data.flatten() for y_var in y_vars]
+    opt_params, var, x_fit, ys_fit, ys_guess = fit_npoly_npks(x, ys, npoly, npks, p0, peak_type, bounds=bounds, freq_bounds=freq_bounds)
+    polyamps, freqs, widths, amps = opt_params
+    var_polyamps, var_freqs, var_widths, var_amps = var
+    data_vars = {}
+    coord_vars= {}
+    attrs = {}
+    coord_vars['Peak Fit Params'] = ['Frequency (THz)', 'Width (THz)', 'Amplitude']
+    for ii, y_var in enumerate(y_vars):
+        coord_vars[x_var+f' ({y_var} fit)'] = x_fit
+        data_vars[y_var+' (fit)'] = ((x_var+f' ({y_var} fit)'), ys_fit[ii])
+        data_vars[y_var+' (fit guess)'] = ((x_var+f' ({y_var} fit)'), ys_guess[ii])
+        for jj, f in enumerate(freqs):
+            peak_params = [f, widths[jj], amps[ii][[jj]]]
+            peak_var_params = [var_freqs[jj], var_widths[jj], var_amps[ii][[jj]]]
+            #data_vars[f'Peak {jj+1} Params ({y_var} fit)'] = (('Peak Fit Params'), peak_params)
+            #data_vars[f'Peak {jj+1} Params Variance ({y_var} fit)'] = (('Peak Fit Params'), peak_var_params)
+    for ii, f in enumerate(freqs):
+            data_vars[f'Peak {ii+1} Frequency (THz)'] = ((), f)
+            data_vars[f'Peak {ii+1} Frequency (THz) Variance'] = ((), var_freqs[ii])
+            data_vars[f'Peak {ii+1} Width (THz)'] = ((), widths[ii])
+            data_vars[f'Peak {ii+1} Widths (THz) Variance'] = ((), var_widths[ii])
+    attrs['peak fit params'] = opt_params
+
+    return data_vars, coord_vars, attrs
+
+
 ###############
 ### Helpers ###
-###############s
+###############
 
 def redefine_fit_angles(params):
     '''
@@ -207,6 +243,10 @@ def redefine_fit_angles(params):
     while params[3]>180:
         params[3]=params[3]-180
     return params
+
+##############################
+### Damped oscillator fits ###
+###############s##############
 
 def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None):
     '''
@@ -276,7 +316,7 @@ def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_
 
     return opt_params, var, x_fit, ys_fit, ys_guess
 
-def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None):
+def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False):
     '''
     given xdata and a set of y datas, simulatneously fits the ys to same set of frequencies with other paramters variable.
     params are in the form [freqs, c1, other_params1, ..., cn, other_params2]
@@ -286,6 +326,7 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
         ys = [ys]
     n_sets = len(ys)
     n_freqs = n_damped + n_over_damped
+
     if params0==None:
         freqs0 = np.array([100/np.max(x) for i in range(n_freqs)])
         damps0 = np.array([2/np.max(x) for i in range(n_freqs)])
@@ -317,6 +358,12 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
         lower_od_phis = np.array([[0 for i in range(n_over_damped)] for j in range(n_sets)])
         lower_bounds=flatten_params([lower_freqs, lower_damps, lower_cs, lower_d_amps, lower_d_phis, lower_od_amps, lower_od_phis])
         bounds = (lower_bounds, upper_bounds)
+
+    # normalize ys to fit on equal footing:
+    if normalize==True:
+        norm_ys = [np.max(np.abs(y)) for y in ys]
+        ys = [y/np.max(y) for y in ys]
+
     # flatten params and execute fit
     params0_flattened = flatten_params(params0)
     params0_packed = pack_params(params0_flattened, n_freqs, n_sets)
@@ -328,6 +375,23 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
     #cov = np.linalg.inv(J.T.dot(J))
     #var_flattened = np.sqrt(np.diagonal(cov))
     var_flattened = opt_params_flattened
+
+    # renormalize ys
+    if normalize==True:
+        opt_params = unflatten_params(opt_params_flattened, n_damped, n_over_damped, n_sets)
+        var = unflatten_params(var_flattened, n_damped, n_over_damped, n_sets)
+        freqs, damps, cs, d_amps, d_phis, od_amps, od_phis = opt_params
+        var_freqs, var_damps, var_cs, var_d_amps, var_d_phis, var_od_amps, var_od_phis = var
+        cs = np.array([cs[i]*norm_ys[i] for i in range(n_sets)])
+        d_amps = np.array([d_amps[i]*norm_ys[i] for i in range(n_sets)])
+        od_amps = np.array([od_amps[i]*norm_ys[i] for i in range(n_sets)])
+        var_cs = np.array([var_cs[i]*norm_ys[i] for i in range(n_sets)])
+        var_d_amps = np.array([var_d_amps[i]*norm_ys[i] for i in range(n_sets)])
+        var_od_amps = np.array([var_od_amps[i]*norm_ys[i] for i in range(n_sets)])
+        opt_params = [freqs, damps, cs, d_amps, d_phis, od_amps, od_phis]
+        var = [var_freqs, var_damps, var_cs, var_d_amps, var_d_phis, var_od_amps, var_od_phis]
+        opt_params_flattened = flatten_params(opt_params)
+        var_flattened = flatten_params(var)
 
     # evaluate fit and guess over x
     opt_params_packed = pack_params(opt_params_flattened, n_freqs, n_sets)
@@ -436,3 +500,135 @@ def residual_fft_ndamped(params, x, ys, fosc, n_freqs, n_sets, n_params):
     y_total = np.concatenate([y_real, y_imag])
     y_computed_total = np.concatenate([y_computed_real, y_computed_imag])
     return np.abs(y_total - y_computed_total)
+
+########################################
+### Gaussian/Lorentzian peak fitting ###
+########################################
+
+def fit_npoly_npks(x, ys, npoly, npks, params0=None, peak_type=0, bounds=None, freq_bounds=None):
+    '''
+    given xdata and a set of y datas, simulatneously fits the ys to same set of frequencies with other paramters variable. polynomials can also be added to handle backgrounds.
+    params are in the form [polyamps, freqs, widths, a1, a2, ..., an]
+    '''
+    # setup 
+    if type(ys) is not list:
+        ys = [ys]
+    n_sets = len(ys)
+    if params0==None:
+        coeffs0 = np.array([[0 for i in range(npoly)] for j in range(n_sets)])
+        freqs0 = np.array([100/np.max(x) for i in range(npks)])
+        widths0 = np.array([2/np.max(x) for i in range(npks)])
+        d_amps0 = np.array([[np.max(ys[j]) for i in range(npks)] for j in range(n_sets)])
+        params0=[coeffs0, freqs0, widths0, d_amps0]
+    if bounds==None:
+        if freq_bounds==None:
+            upper_freqs = np.array([np.inf for i in range(npks)])
+            lower_freqs = np.array([0 for i in range(npks)])
+        else:
+            lower_freqs = freq_bounds[0]
+            upper_freqs = freq_bounds[1]
+        upper_coeffs = np.array([[np.inf for i in range(npoly)] for j in range(n_sets)])
+        upper_widths = np.array([np.inf for i in range(npks)])
+        upper_amps = np.array([[np.inf for i in range(npks)] for j in range(n_sets)])
+        upper_bounds = flatten_params_npoly_npks([upper_coeffs, upper_freqs, upper_widths, upper_amps])
+        lower_coeffs = np.array([[-np.inf for i in range(npoly)] for j in range(n_sets)])
+        lower_widths = np.array([0 for i in range(npks)])
+        lower_amps = np.array([[-np.inf for i in range(npks)] for j in range(n_sets)])
+        lower_bounds = flatten_params_npoly_npks([lower_coeffs, lower_freqs, lower_widths, lower_amps])
+        bounds = (lower_bounds, upper_bounds)
+
+    # flatten params and execute fit
+    params0_flattened = flatten_params_npoly_npks(params0)
+    params0_packed = pack_params_npoly_npks(params0_flattened, npoly, npks, n_sets)
+    n_params = len(params0_packed)
+    f = ff.npoly_npk(npoly, npks, peak_type)
+    res_lsq = opt.least_squares(residual_npoly_npks, params0_flattened, bounds=bounds, args=(x, ys, f, npoly, npks, n_sets, n_params))
+    opt_params_flattened = res_lsq.x
+    J = res_lsq.jac
+    cov = np.linalg.inv(J.T.dot(J))
+    var_flattened = np.sqrt(np.diagonal(cov))
+
+    # evaluate fit and guess over x
+    opt_params_packed = pack_params_npoly_npks(opt_params_flattened, npoly, npks, n_sets)
+    x_fit = np.linspace(x[0], x[-1], 1000)
+    ys_fit = [f(x_fit, *opt_params_packed[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+    ys_guess = [f(x_fit, *params0_packed[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+
+    # unflatten params for return
+    opt_params = unflatten_params_npoly_npks(opt_params_flattened, npoly, npks, n_sets)
+    var = unflatten_params_npoly_npks(var_flattened, npoly, npks, n_sets)
+
+    return opt_params, var, x_fit, ys_fit, ys_guess
+
+def flatten_params_npoly_npks(params):
+    '''
+    take parameters made for fit and pack them for residual function. params are in the form
+
+    params = [[[polyamps]], [freqs], [widths]], [[amps]]]
+    
+    and outputs (given l polynomials n frequencies and m sets)
+
+    params = [polyamp11,...,polyamp1l,...,polyampml,f1,..,fn,width1,...,widthn,amp11,...,amp1n,....ampmn]
+
+    as a numpy array
+    '''
+
+    polyamps, freqs, widths, amps = params
+    n_sets = len(amps)
+    npoly = len(polyamps)
+    npks = len(freqs)
+    flattened_params = []
+    for i in range(n_sets):
+        flattened_params += [j for j in polyamps[i]]
+    flattened_params+=[f for f in freqs]+[w for w in widths]
+    for i in range(n_sets):
+        flattened_params += [j for j in amps[i]]
+    return np.array(flattened_params)
+
+def pack_params_npoly_npks(params, npoly, npks, n_sets):
+    '''
+    take flattened parameters made for fit and pack them for residual function. params are in the form
+
+    params = [polyamp11,...,polyamp1l,...,polyampml,f1,..,fn,width1,...,widthn,amp11,...,amp1n,....ampmn]
+    
+    and outputs
+
+    params = [polyamp11,...polyamp1l, amp11, f1, width1,...,amp1n,fn,widthn,...,polyampm1,...polyampml,...ampmn, fn, widthn]
+
+    '''
+    nsetparams = npoly+3*npks
+    packed_params = np.zeros(n_sets*nsetparams)
+    for i in range(n_sets):
+        packed_params[i*nsetparams:i*nsetparams+npoly] = params[i*npoly:(i+1)*npoly] # polyamps
+        for j in range(npks):
+            packed_params[i*nsetparams+npoly+3*j] = params[npoly*n_sets+j]
+            packed_params[i*nsetparams+npoly+3*j+1] = params[npoly*n_sets+npks+j]
+            packed_params[i*nsetparams+npoly+3*j+2] = params[npoly*n_sets+2*npks+i*npks+j]
+    return np.array(packed_params)
+
+def unflatten_params_npoly_npks(params, npoly, npks, n_sets):
+    '''
+    unpacks parameters back into original form, ie from 
+    
+    params = [polyamp11,...,polyamp1l,...,polyampml,f1,..,fn,width1,...,widthn,amp11,...,amp1n,....ampmn]
+
+    to 
+
+    params = [[[polyamps]], [freqs], [widths]], [[amps]]]
+    '''
+    polyamps = amps = np.array(params[:npoly*n_sets]).reshape((n_sets, npoly))
+    freqs = np.array(params[npoly*n_sets:npoly*n_sets+npks])
+    widths = np.array(params[npoly*n_sets+npks:npoly*n_sets+2*npks])
+    amps = np.array(params[npoly*n_sets+2*npks:]).reshape((n_sets, npks))
+    unflattened_params = [polyamps, freqs, widths, amps]
+    return unflattened_params
+
+def residual_npoly_npks(params, x, ys, f, npoly, npks, n_sets, n_params):
+    '''
+    computes residual for polynomials + peak
+    '''
+    params = pack_params_npoly_npks(params, npoly, npks, n_sets)
+    ys_computed = [f(x, *params[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+    y = np.concatenate(ys)
+    y_computed = np.concatenate(ys_computed)
+    return np.abs(y - y_computed)
