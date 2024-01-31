@@ -54,6 +54,14 @@ def fit_birefringence(measurement, x_var, y_var, p0=None):
     for ii, name in enumerate(names):
         data_vars[name] = ((), popt[ii])
         data_vars[f'{name} Variance'] = ((), perr[ii])
+    diagonal = popt[2]*np.cos(2*popt[3]*np.pi/180)
+    off_diagonal = popt[2]*np.sin(2*popt[3]*np.pi/180)
+    diagonal_var = np.sqrt((np.cos(2*popt[3]*np.pi/180)**2)*perr[2]**2 + ((2*popt[2]*np.sin(2*popt[3]*np.pi/180))**2)*perr[3]**2) # error propagation formula
+    off_diagonal_var = np.sqrt((np.sin(2*popt[3]*np.pi/180)**2)*perr[2]**2 + ((2*popt[2]*np.cos(2*popt[3]*np.pi/180))**2)*perr[3]**2) # error propagation formula
+    data_vars[f'Diagonal Birefringence ({y_var})'] = ((), diagonal)
+    data_vars[f'Off-diagonal Birefringence ({y_var})'] = ((), off_diagonal)
+    data_vars[f'Diagonal Birefringence ({y_var}) Variance'] = ((), diagonal_var)
+    data_vars[f'Off-diagonal Birefringence ({y_var}) Variance'] = ((), off_diagonal_var)
     coord_vars[x_var+f' ({y_var} fit)'] = xfit
     data_vars[y_var+' (fit)'] = ((x_var+f' ({y_var} fit)'), yfit)
     return data_vars, coord_vars, attrs
@@ -217,6 +225,56 @@ def fit_npoly_npk_meas(measurement, x_var, y_vars, npoly, npks, p0=None,  peak_t
     attrs['peak fit params'] = opt_params
 
     return data_vars, coord_vars, attrs
+
+######################################
+### Tempearture Integration ##########
+######################################
+
+def temp_integrate(meas, var, temp_var='Temperature (K)'):
+    '''
+    Given a measurement, cumulatively integrate var along T.
+    '''
+
+    mod_meas = meas.copy()
+
+    temps = mod_meas[temp_var].data
+    x = mod_meas[var].data
+    #offset = np.mean(mod_meas[var].sel({temp_var:slice(temps[-3],temps[-1])}).data)
+    #x = x - offset
+    x_int = -sp.integrate.cumulative_trapezoid(x, temps, initial=0)
+    x_int = x_int - x_int[-1]
+
+    mod_meas[f'{var} T integrated'] = ((temp_var), x_int)
+        
+    return mod_meas
+
+def temp_integrate_polarization(meas, var, temp_var='Temperature (K)'):
+    '''
+    Same as above but handles variables that depends on Polarization. 
+    '''
+
+    mod_meas = meas.copy()
+    polarizations = mod_meas['Polarization Angle (deg)'].data
+    var_dims = mod_meas[var].dims
+    pol_idx = list(var_dims).index('Polarization Angle (deg)')
+
+    x_int2d = np.zeros_like(mod_meas[var])
+    for ii, pol in enumerate(polarizations):
+
+        temps = mod_meas[temp_var].data
+        x = mod_meas[var].sel({'Polarization Angle (deg)':pol}).data
+        #offset = np.mean(mod_meas[var].sel({'Polarization Angle (deg)':pol, temp_var:slice(temps[-3],temps[-1])}).data)
+        #x = x - offset
+        x_int = -sp.integrate.cumulative_trapezoid(x, temps, initial=0)
+        x_int = x_int - x_int[-1]
+        if pol_idx==0:
+            x_int2d[ii,:] = x_int
+        else:
+            x_int2d[:,ii] = x_int
+
+    mod_meas[f'{var} T integrated'] = (var_dims, x_int2d)
+
+    return mod_meas
 
 
 ###############
