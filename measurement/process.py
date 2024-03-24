@@ -104,7 +104,11 @@ def add_processed_nd(measurement, function_set, coord_vars=[], compute_vars=[]):
     coord_data = []
     measurement_list = []
     for coord in compute_vars:
-        coord_data.append(measurement[coord].data)
+        d = measurement[coord].data
+        if d.shape==():
+            compute_vars.remove(coord)
+        else:
+            coord_data.append(d)
     coord_vals = gen_coordinates_recurse(coord_data, len(coord_data)-1)
     for vals in coord_vals:
             coords_dict = {}

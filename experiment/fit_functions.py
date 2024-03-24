@@ -116,21 +116,33 @@ def damped_cos_phi(x, f0, g, A, phi):
     '''
     Damped oscillatory function
     '''
-    return A*np.exp(-x*g)*np.cos(2*np.pi*f0*x+phi)
+    return (A/g)*np.exp(-x*g)*np.cos(2*np.pi*f0*x+phi)
 
-def FFT_damped_sin(f, f0, g, A):
+def FFT_damped_cos_phi(f, f0, g, A, phi):
+    '''
+    Fourier transform of damped sinusoid with a phase
+    '''
+    return A*g*np.exp(1j*phi)/(g + 1j*2*np.pi*(f-f0))
+
+def pow_damped_cos_phi(f, f0, g, A):
+    '''
+    Fourier transform of damped sinusoid with a phase
+    '''
+    return A**2*g**2/(g**2 + (2*np.pi*(f-f0))**2)
+
+def FFT_damped_sin_old(f, f0, g, A):
     '''
     Fourier transform of damped sine function
     '''
     return A*f0*(np.pi*2)/((g+1j*f*np.pi*2)**2+(f0*np.pi*2)**2)
 
-def FFT_damped_cos(f, f0, g, A):
+def FFT_damped_cos_old(f, f0, g, A):
     '''
     Fourier transform of damped sine function
     '''
     return A*(g+1j*(2*np.pi*f))/((g+1j*f*np.pi*2)**2+(f0*np.pi*2)**2)
 
-def FFT_damped_cos_phi(f, f0, g, A, phi):
+def FFT_damped_cos_phi_old(f, f0, g, A, phi):
     '''
     Fourier transform of damped sinusoid with a phase
     '''
@@ -185,6 +197,25 @@ def FFT_ndamped_osc(n_damped, n_over_damped):
         # Number of overdamped modes 
         for jj in range (0, n_over_damped):
             fun = fun+FFT_over_damped(x,*params2[(0+jj*4):(4+jj*4)])
+            
+        return fun #+c
+
+    return func
+
+def pow_ndamped_osc(n_damped, n_over_damped):
+    '''
+    power spectrum of arbitrary combinations of damped and overdamped oscillators
+    '''
+    def func(x,params):
+        fun=0
+        c, params1, params2 = params[0], params[1:3*n_damped+1], params[3*n_damped+1:]
+        # Number of damped modes 
+        for ii in range (0, n_damped):
+            fun = fun + pow_damped_cos_phi(x,*params1[(0+ii*3):(3+ii*3)])
+            
+        # Number of overdamped modes 
+        for jj in range (0, n_over_damped):
+            fun = fun + FFT_over_damped(x,*params2[(0+jj*4):(4+jj*4)],0)*np.conjugate(FFT_over_damped(x,*params2[(0+jj*4):(4+jj*4)],0))
             
         return fun #+c
 
