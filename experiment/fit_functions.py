@@ -116,19 +116,19 @@ def damped_cos_phi(x, f0, g, A, phi):
     '''
     Damped oscillatory function
     '''
-    return (A/g)*np.exp(-x*g)*np.cos(2*np.pi*f0*x+phi)
+    return (A)*np.exp(-x*g)*np.cos(2*np.pi*f0*x+phi)
 
 def FFT_damped_cos_phi(f, f0, g, A, phi):
     '''
     Fourier transform of damped sinusoid with a phase
     '''
-    return A*g*np.exp(1j*phi)/(g + 1j*2*np.pi*(f-f0))
+    return (1/2)*A*np.exp(1j*phi)/(g + 1j*2*np.pi*(f-f0))
 
 def pow_damped_cos_phi(f, f0, g, A):
     '''
-    Fourier transform of damped sinusoid with a phase
+    Power spectrum of damped sinusoid
     '''
-    return A**2*g**2/(g**2 + (2*np.pi*(f-f0))**2)
+    return (1/4)*A**2/(g**2 + (2*np.pi*(f-f0))**2)
 
 def FFT_damped_sin_old(f, f0, g, A):
     '''
@@ -189,7 +189,7 @@ def FFT_ndamped_osc(n_damped, n_over_damped):
     '''
     def func(x,params):
         fun=0
-        c, params1, params2 = params[0], params[1:4*n_damped+1], params[4*n_damped+1:]
+        params1, params2 = params[:4*n_damped], params[4*n_damped:]
         # Number of damped modes 
         for ii in range (0, n_damped):
             fun = fun+FFT_damped_cos_phi(x,*params1[(0+ii*4):(4+ii*4)])
