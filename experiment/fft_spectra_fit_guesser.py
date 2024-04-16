@@ -304,20 +304,30 @@ def save_p0(p0, filename, fmt_string='%12.3e'):
 
 def load_p0(filename):
     data = np.genfromtxt(filename, skip_header=1)
-    nsets = int((len(data[0,:])-2)/2)
-    freqs = data[:,0]
-    damps = data[:,1]
-    amps = data[:,2:2+nsets].transpose()
-    phis = data[:,2+nsets:].transpose()
-    p0 = [freqs, damps, amps, phis, np.array([[]]), np.array([[]])]
+    if data.ndim==1:
+        nsets = int((len(data)-2)/2)
+        freqs = np.array([data[0]])
+        damps = np.array([data[1]])
+        amps = np.array([np.array([i]) for i in data[2:2+nsets]])
+        phis = np.array([np.array([i]) for i in data[2+nsets:]])
+        p0 = [freqs, damps, amps, phis, np.array([[]]), np.array([[]])]
+    else: 
+        nsets = int((len(data[0,:])-2)/2)
+        freqs = data[:,0]
+        damps = data[:,1]
+        amps = data[:,2:2+nsets].transpose()
+        phis = data[:,2+nsets:].transpose()
+        p0 = [freqs, damps, amps, phis, np.array([[]]), np.array([[]])]
     return p0
     
-def add_peak_to_p0(p0, idx, freq):
+def add_peak_to_p0(p0, idx, freq=None):
     freqs0, damps0, amps_d0, phis_d0, amps_od0, amps2_od0 = p0
+    if freq is None:
+        freq=freqs0[idx-1]
     freqs0 = np.insert(freqs0, idx, freq)
-    damps0 = np.insert(damps0, idx, damps0[-1])
-    amps_d0 = np.array([np.insert(ii, idx, 1e-8) for ii in amps_d0])
-    phis_d0 = np.array([np.insert(ii, idx, 1e-8) for ii in phis_d0])
+    damps0 = np.insert(damps0, idx, damps0[idx-1])
+    amps_d0 = np.array([np.insert(ii, idx, ii[idx-1]) for ii in amps_d0])
+    phis_d0 = np.array([np.insert(ii, idx, ii[idx-1]) for ii in phis_d0])
     p0 = [freqs0, damps0, amps_d0, phis_d0, amps_od0, amps2_od0]
     return p0
 

@@ -127,6 +127,8 @@ def FFT_damped_cos_phi(f, f0, g, A, phi):
 def pow_damped_cos_phi(f, f0, g, A):
     '''
     Power spectrum of damped sinusoid
+    
+    area under this curve is A**2/(8*g)
     '''
     return (1/4)*A**2/(g**2 + (2*np.pi*(f-f0))**2)
 

@@ -311,10 +311,16 @@ def save_p0(p0, filename, fmt_string='%12.3e'):
 
 def load_p0(filename):
     data = np.genfromtxt(filename, skip_header=1)
-    freqs = data[:,0]
-    damps = data[:,1]
-    amps = data[:,2:].transpose()
-    p0 = [freqs, damps, amps, np.array([[]]), np.array([[]])]
+    if data.ndim==1:
+        freqs = np.array([data[0]])
+        damps = np.array([data[1]])
+        amps = np.array([[i] for i in data[2:]])
+        p0 = [freqs, damps, amps, np.array([[]]), np.array([[]])]
+    else: 
+        freqs = data[:,0]
+        damps = data[:,1]
+        amps = data[:,2:].transpose()
+        p0 = [freqs, damps, amps, np.array([[]]), np.array([[]])]
     return p0
 
 def add_peak_to_p0(p0, idx, freq):
