@@ -117,13 +117,13 @@ def savgol_subtract(measurement, x_var, y_var, window_frac=1, polyorder=2):
     attrs = {}
     return data_vars, coord_vars, attrs
 
-def fit_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}):
+def fit_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
 
     if type(y_vars) is not list:
         y_vars = [y_vars]
     x = measurement[x_var].data.flatten()
     ys = [measurement[y_var].data.flatten() for y_var in y_vars]
-    opt_params, var, x_fit, ys_fit, ys_guess = fit_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict)
+    opt_params, var, x_fit, ys_fit, ys_guess = fit_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict, method=method)
     freqs, damps, cs, d_amps, d_phis, od_amps1, od_amps2 = opt_params
     var_freqs, var_damps, var_cs, var_d_amps, var_d_phis, var_od_amps1, var_od_amps2 = var
     data_vars = {}
@@ -162,13 +162,13 @@ def fit_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=Non
 
     return data_vars, coord_vars, attrs
 
-def fit_fft_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}):
+def fit_fft_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
 
     if type(y_vars) is not list:
         y_vars = [y_vars]
     x = measurement[x_var].data.flatten()
     ys = [measurement[y_var].data.flatten() for y_var in y_vars]
-    opt_params, var, x_fit, ys_fit, ys_guess = fit_fft_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict)
+    opt_params, var, x_fit, ys_fit, ys_guess = fit_fft_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict, method=method)
     freqs, damps, d_amps, d_phis, od_amps1, od_amps2 = opt_params
     var_freqs, var_damps, var_d_amps, var_d_phis, var_od_amps1, var_od_amps2 = var
     data_vars = {}
@@ -205,13 +205,13 @@ def fit_fft_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0
 
     return data_vars, coord_vars, attrs
 
-def fit_pow_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}):
+def fit_pow_ndamped_meas(measurement, x_var, y_vars, n_damped, n_over_damped, p0=None, freq_bounds=None, bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
 
     if type(y_vars) is not list:
         y_vars = [y_vars]
     x = measurement[x_var].data.flatten()
     ys = [measurement[y_var].data.flatten() for y_var in y_vars]
-    opt_params, var, x_fit, ys_fit, ys_guess = fit_pow_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict)
+    opt_params, var, x_fit, ys_fit, ys_guess = fit_pow_ndamped(x, ys, n_damped, n_over_damped, p0, bounds=bounds, freq_bounds=freq_bounds, normalize=normalize, kwargs_dict=kwargs_dict, method=method)
     freqs, damps, d_amps, od_amps, od_phis = opt_params
     var_freqs, var_damps, var_d_amps, var_od_amps, var_od_phis = var
     data_vars = {}
@@ -361,7 +361,7 @@ def redefine_fit_angles(params):
 ### Time domain damped oscillator fits ###
 ###############s##########################
 
-def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}):
+def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
     '''
     given xdata and a set of y datas, simulatneously fits the ys to same set of frequencies with other paramters variable.
     params are in the form [freqs, damps, c1, amps1, phis1 ..., cn, ampsn, phisn]
@@ -410,6 +410,7 @@ def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_
     upper_bounds=flatten_params([upper_freqs, upper_damps, upper_cs, upper_d_amps, upper_d_phis, upper_od_amps1, upper_od_amps2])
     lower_bounds=flatten_params([lower_freqs, lower_damps, lower_cs, lower_d_amps, lower_d_phis, lower_od_amps1, lower_od_amps2])
     bounds = (lower_bounds, upper_bounds)
+    bounds_minimize = [(lower_bounds[ii], upper_bounds[ii]) for ii in range(len(lower_bounds))]
 
     # normalize ys to fit on equal footing:
     if normalize==True:
@@ -447,14 +448,31 @@ def fit_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_
     params0_packed = pack_params(params0_flattened, n_freqs, n_sets)
     n_params = len(params0_packed)
     fosc = ff.ndamped_osc(n_damped, n_over_damped)
-    res_lsq = opt.least_squares(residual_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
-    opt_params_flattened = res_lsq.x
-    try:
-        J = res_lsq.jac
-        cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
-        var_flattened = np.sqrt(np.diagonal(cov))
-    except:
-        print('singular matrix found')
+    if method=='least_squares':
+        res_lsq = opt.least_squares(residual_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res_lsq.x
+        try:
+            J = res_lsq.jac
+            cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
+            var_flattened = np.sqrt(np.diagonal(cov))
+        except:
+            print('singular matrix found')
+            var_flattened = opt_params_flattened
+    elif method=='dual_annealing':
+        res = opt.dual_annealing(cost_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='differential_evolution':
+        res = opt.differential_evolution(cost_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='basinhopping':
+        res = opt.basinhopping(cost_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='shgo':
+        res = opt.shgo(cost_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res.x
         var_flattened = opt_params_flattened
 
     # renormalize ys
@@ -569,6 +587,17 @@ def residual_ndamped(params, x, ys, fosc, n_freqs, n_sets, n_params):
     y_computed = np.concatenate(ys_computed)
     return np.abs(y - y_computed)
 
+def cost_ndamped(params, x, ys, fosc, n_freqs, n_sets, n_params):
+    '''
+    computes residual for ndamped oscillators and 
+    '''
+    params = pack_params(params, n_freqs, n_sets)
+    ys_computed = [fosc(x, params[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+    y = np.concatenate(ys)
+    y_computed = np.concatenate(ys_computed)
+    residual = y - y_computed
+    return np.sum(residual**2)
+
 def compute_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
     n_freqs = n_damped+n_over_damped
     params = flatten_params(params)
@@ -580,7 +609,7 @@ def compute_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
 ### FFT damped oscillator fits ###
 ###############s##################
 
-def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}):
+def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
     '''
     given xdata and a set of y datas, simulatneously fits the ys to same set of frequencies with other paramters variable.
     params are in the form [freqs, c1, other_params1, ..., cn, other_params2]
@@ -626,6 +655,7 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
     upper_bounds=flatten_params_fft([upper_freqs, upper_damps, upper_d_amps, upper_d_phis, upper_od_amps1, upper_od_amps2])
     lower_bounds=flatten_params_fft([lower_freqs, lower_damps, lower_d_amps, lower_d_phis, lower_od_amps1, lower_od_amps2])
     bounds = (lower_bounds, upper_bounds)
+    bounds_minimize = [(lower_bounds[ii], upper_bounds[ii]) for ii in range(len(lower_bounds))]
 
     # normalize ys to fit on equal footing:
     if normalize==True:
@@ -659,14 +689,31 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
     params0_packed = pack_params_fft(params0_flattened, n_freqs, n_sets)
     n_params = len(params0_packed)
     fosc = ff.FFT_ndamped_osc(n_damped, n_over_damped)
-    res_lsq = opt.least_squares(residual_fft_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
-    opt_params_flattened = res_lsq.x
-    try:
-        J = res_lsq.jac
-        cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
-        var_flattened = np.sqrt(np.diagonal(cov))
-    except:
-        print('singular matrix found')
+    if method=='least_squares':
+        res_lsq = opt.least_squares(residual_fft_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res_lsq.x
+        try:
+            J = res_lsq.jac
+            cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
+            var_flattened = np.sqrt(np.diagonal(cov))
+        except:
+            print('singular matrix found')
+            var_flattened = opt_params_flattened
+    elif method=='dual_annealing':
+        res = opt.dual_annealing(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='differential_evolution':
+        res = opt.differential_evolution(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='basinhopping':
+        res = opt.basinhopping(residual_fft_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='shgo':
+        res = opt.shgo(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res.x
         var_flattened = opt_params_flattened
 
     # renormalize ys
@@ -782,6 +829,21 @@ def residual_fft_ndamped(params, x, ys, fosc, n_freqs, n_sets, n_params):
     y_computed_total = np.concatenate([y_computed_real, y_computed_imag])
     return np.abs(y_total - y_computed_total)
 
+def cost_fft_ndamped(params, x, ys, fosc, n_freqs, n_sets, n_params):
+    '''
+    computes residual for ndamped oscillators and 
+    '''
+    params = pack_params_fft(params, n_freqs, n_sets)
+    ys_computed = [fosc(x, params[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+    y = np.concatenate(ys)
+    y_real, y_imag = np.real(y), np.imag(y)
+    y_computed = np.concatenate(ys_computed)
+    y_computed_real, y_computed_imag = np.real(y_computed), np.imag(y_computed)
+    y_total = np.concatenate([y_real, y_imag])
+    y_computed_total = np.concatenate([y_computed_real, y_computed_imag])
+    residual = (y_total - y_computed_total)
+    return np.sum(residual**2)
+
 def compute_fft_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
     n_freqs = n_damped+n_over_damped
     params = flatten_params_fft(params)
@@ -793,7 +855,7 @@ def compute_fft_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
 ### Power spectra damped oscillator fits ###
 ############################################
 
-def fit_pow_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}):
+def fit_pow_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, freq_bounds=None, normalize=False, kwargs_dict={}, method='least_squares'):
     '''
     fits for power spectrum (ie, ignores phase information)
     given xdata and a set of y datas, simulatneously fits the ys to same set of frequencies with other paramters variable.
@@ -837,6 +899,7 @@ def fit_pow_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
     upper_bounds=flatten_params_pow([upper_freqs, upper_damps, upper_d_amps, upper_od_amps, upper_od_amps2])
     lower_bounds=flatten_params_pow([lower_freqs, lower_damps, lower_d_amps, lower_od_amps, lower_od_amps2])
     bounds = (lower_bounds, upper_bounds)
+    bounds_minimize = [(lower_bounds[ii], upper_bounds[ii]) for ii in range(len(lower_bounds))]
 
     # normalize ys to fit on equal footing:
     if normalize==True:
@@ -870,13 +933,32 @@ def fit_pow_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
     params0_packed = pack_params_pow(params0_flattened, n_damped, n_over_damped, n_sets)
     n_params = len(params0_packed)
     fosc = ff.pow_ndamped_osc(n_damped, n_over_damped)
-    res_lsq = opt.least_squares(residual_pow_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_damped, n_over_damped, n_sets, n_params), **kwargs_dict)
-    opt_params_flattened = res_lsq.x
-    try:
-        J = res_lsq.jac
-        cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
-        var_flattened = np.sqrt(np.diagonal(cov))
-    except:
+    if method=='least_squares':
+        res_lsq = opt.least_squares(residualpowt_ndamped, params0_flattened, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res_lsq.x
+        try:
+            J = res_lsq.jac
+            cov = np.linalg.inv(J.T.dot(J))*(res_lsq.fun.T @ res_lsq.fun)/ (res_lsq.fun.size - res_lsq.x.size)
+            var_flattened = np.sqrt(np.diagonal(cov))
+        except:
+            print('singular matrix found')
+            var_flattened = opt_params_flattened
+    elif method=='dual_annealing':
+        res = opt.dual_annealing(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='differential_evolution':
+        res = opt.differential_evolution(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='basinhopping':
+        res = opt.basinhopping(residual_pow_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
+    elif method=='shgo':
+        res = opt.shgo(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        opt_params_flattened = res.x
+        var_flattened = opt_params_flattened
         print('singular matrix found')
         var_flattened = opt_params_flattened
 
@@ -996,6 +1078,17 @@ def residual_pow_ndamped(params, x, ys, fosc, n_damped, n_over_damped, n_sets, n
     y_computed = np.concatenate(ys_computed)
     return np.abs(y - y_computed)
 
+def cost_pow_ndamped(params, x, ys, fosc, n_damped, n_over_damped, n_sets, n_params):
+    '''
+    computes residual for ndamped oscillators and 
+    '''
+    params = pack_params_pow(params, n_damped, n_over_damped, n_sets)
+    ys_computed = [fosc(x, params[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
+    y = np.concatenate(ys)
+    y_computed = np.concatenate(ys_computed)
+    residual = y - y_computed
+    return np.sum(residual**2)
+
 def compute_pow_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
     params = flatten_params_pow(params)
     params = pack_params_pow(params, n_damped, n_over_damped, n_sets)
@@ -1003,7 +1096,7 @@ def compute_pow_ndamped_nsets(fosc, x, params, n_damped, n_over_damped, n_sets):
     return [fosc(x, params[i*int(n_params/n_sets):(i+1)*int(n_params/n_sets)]) for i in range(n_sets)]
 
 ########################################
-### Gaussian/Lorentzian peak fitting ###
+### Gaussian/Lorentzian peak fitting ### # hasn't been updated in a while, currently deprecated
 ########################################
 
 def fit_npoly_npks(x, ys, npoly, npks, params0=None, peak_type=0, bounds=None, freq_bounds=None):
