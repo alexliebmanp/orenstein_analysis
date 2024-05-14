@@ -700,19 +700,19 @@ def fit_fft_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
             print('singular matrix found')
             var_flattened = opt_params_flattened
     elif method=='dual_annealing':
-        res = opt.dual_annealing(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        res = opt.dual_annealing(cost_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='differential_evolution':
-        res = opt.differential_evolution(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        res = opt.differential_evolution(cost_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='basinhopping':
-        res = opt.basinhopping(residual_fft_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
+        res = opt.basinhopping(cost_fft_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='shgo':
-        res = opt.shgo(residual_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        res = opt.shgo(cost_fft_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
 
@@ -944,19 +944,19 @@ def fit_pow_ndamped(x, ys, n_damped, n_over_damped, params0=None, bounds=None, f
             print('singular matrix found')
             var_flattened = opt_params_flattened
     elif method=='dual_annealing':
-        res = opt.dual_annealing(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        res = opt.dual_annealing(cost_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='differential_evolution':
-        res = opt.differential_evolution(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
+        res = opt.differential_evolution(cost_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), x0=params0_flattened, **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='basinhopping':
-        res = opt.basinhopping(residual_pow_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
+        res = opt.basinhopping(cost_pow_ndamped, params0_flattened, minimizer_kwargs=dict(bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params)))
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
     elif method=='shgo':
-        res = opt.shgo(residual_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
+        res = opt.shgo(cost_pow_ndamped, bounds=bounds, args=(x, ys, fosc, n_freqs, n_sets, n_params), **kwargs_dict)
         opt_params_flattened = res.x
         var_flattened = opt_params_flattened
         print('singular matrix found')
