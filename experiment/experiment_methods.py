@@ -282,6 +282,15 @@ def fit_npoly_npk_meas(measurement, x_var, y_vars, npoly, npks, p0=None,  peak_t
 
     return data_vars, coord_vars, attrs
 
+def force_angles_continuous(measurement, x_var, angles_var='Birefringence Angle (Demod x)'):
+
+    angles = measurement[angles_var].data
+    new_angles = make_angles_continuous(angles)
+    data_vars = {f'{angles_var} (continuous)':((x_var), new_angles)}
+    coord_vars = {}
+    attrs = {}
+    return data_vars, coord_vars, attrs
+
 ######################################
 ### Tempearture Integration ##########
 ######################################
@@ -356,6 +365,23 @@ def redefine_fit_angles(params):
     while params[3]>180:
         params[3]=params[3]-180
     return params
+
+def make_angles_continuous(angles, direction=1):
+    '''
+    smooths out angles such that they are more continuous by picking equivalent angles that are nearest to last point
+    '''
+    if direction==-1:
+        angles = np.flip(angles)
+    curr_ang = angles[0]
+    new_angles = np.zeros_like(angles)
+    for ii, ang in enumerate(angles):
+        new_angs = np.array([ang, ang+180, ang-180])
+        keep_idx = np.argmin(np.abs(new_angs-curr_ang))
+        new_angles[ii] = new_angs[keep_idx]
+        curr_ang = new_angs[keep_idx]
+    if direction==-1:
+        new_angles = np.flip(new_angles)
+    return new_angles
 
 ##########################################
 ### Time domain damped oscillator fits ###

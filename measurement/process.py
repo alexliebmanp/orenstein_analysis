@@ -253,3 +253,27 @@ def gen_coordinates_recurse(range_list, n, pos_list=[], current_pos=None):
         pos_list.append(np.copy(current_pos))
 
     return pos_list
+
+def select_around_radius(measurement, target_coordinate, neighbor_range):
+    '''
+    args:
+        - ds: ds to select from
+        - target_coordinate: dictionary of key value pairs where keys are data coordinates and values are target coordinate values
+        - radius: dictionary, where values are radius in indices to select
+    returns:
+        - ds_radius: 
+    '''
+
+    # Find the nearest indices
+    indices = {}
+    isel_dict = {}
+    for key in list(target_coordinate.keys()):
+        nearest_idx = measurement.sel({key:target_coordinate[key]}, method='nearest')[key].values
+        idx = np.abs(measurement[key] - nearest_idx).argmin().item()
+        indices[key] = idx
+        isel_dict[key] = slice(idx - neighbor_range[key], idx + neighbor_range[key]+1)
+
+    # Select neighboring points using .isel (index-based selection)
+    selected_data = measurement.isel(isel_dict)
+    
+    return selected_data
