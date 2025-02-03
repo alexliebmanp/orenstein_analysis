@@ -240,7 +240,7 @@ def dictionary_to_dataset(dictionary, independent_variable):
         - dataset(Dataset):
     '''
     if independent_variable!=None:
-        if independent_variable[0] not in dictionary:
+        if independent_variable not in dictionary:
             print(independent_variable)
             raise ValueError('independent_variable not in dictionary')
     data_vars = {}
