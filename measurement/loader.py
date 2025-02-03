@@ -51,7 +51,11 @@ def load_measurement(filename, independent_variable=None, instruction_set=[], ad
                     property, val = line.split(':\t')
                     if val=='None\n':
                         val = np.nan
-                    metadata[property] = float(val)
+                    try:
+                        val = float(val)
+                    except:
+                        pass
+                    metadata[property] = val
                 elif read_head == 'Data' and number == data_start:
                     header = line.strip().split('\t')
                 else:
