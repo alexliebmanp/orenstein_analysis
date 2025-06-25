@@ -313,6 +313,38 @@ def temp_integrate(meas, var, temp_var='Temperature (K)'):
         
     return mod_meas
 
+def temp_integrate_multivar(meas, var, othervar, temp_var='Temperature (K)', varname=None):
+    '''
+    Given a measurement, cumulatively integrate var along T. Works for variables which are functions of various coordinates
+    '''
+
+    if varname is None:
+        varname = f'{var} T integrated'
+
+    mod_meas = meas.copy()
+    othervals = mod_meas[othervar].data
+    var_dims = mod_meas[var].dims
+    pol_idx = list(var_dims).index(othervar)
+
+    x_int2d = np.zeros_like(mod_meas[var])
+    for ii, val in enumerate(othervals):
+
+        temps = mod_meas[temp_var].data
+        x = mod_meas[var].sel({othervar:val}).data
+        offset = mod_meas[var].sel({othervar:val, temp_var:temps[-1]}).data
+        x = x - offset
+        x_int = np.flip(sp.integrate.cumulative_trapezoid(np.flip(x), np.flip(temps), initial=0))
+        #x_int = x_int - x_int[-1]
+
+        if pol_idx==0:
+            x_int2d[ii,:] = x_int
+        else:
+            x_int2d[:,ii] = x_int
+
+    mod_meas[varname] = (var_dims, x_int2d)
+
+    return mod_meas
+
 def temp_integrate_polarization(meas, var, temp_var='Temperature (K)'):
     '''
     Same as above but handles variables that depends on Polarization. 
